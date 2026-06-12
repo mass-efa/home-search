@@ -13,6 +13,7 @@
         <a class="brand" href="index.html">Home Search</a>
         <div class="nav-links">
           <a href="homes/8762-paisley-drive-ne.html">8762 Paisley Dr NE</a>
+          <a href="submit.html">Request Evaluation</a>
           <a href="skills/home-evaluation/SKILL.md">Evaluation Skill</a>
           <a href="https://github.com/mass-efa/home-search">GitHub</a>
         </div>
@@ -27,7 +28,7 @@
           <p class="lede">A lightweight public site for sharing property evaluations, diligence questions, and the repeatable rubric behind the analysis.</p>
           <div class="hero-actions">
             <a class="button" href="homes/8762-paisley-drive-ne.html">Open Current Brief</a>
-            <a class="button secondary" href="skills/home-evaluation/SKILL.md">View Skill</a>
+            <a class="button secondary" href="submit.html">Request Evaluation</a>
           </div>
         </div>
         <aside class="panel fact-panel" aria-label="Site outcome">
@@ -85,10 +86,24 @@
         <p>The first published brief evaluates 8762 Paisley Dr NE in Seattle. The current read is promising at the $2.0M list price, with particular focus on square-footage reconciliation, title/seller authority, system condition, drainage, and offer timing.</p>
         <p><a class="button" href="homes/8762-paisley-drive-ne.html">Read the full brief</a></p>
       </section>
+
+      <section class="section">
+        <h2>Published Evaluations</h2>
+        <div class="home-list" data-home-list data-src="data/homes.json">
+          <p>Loading published evaluations...</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Request A New Evaluation</h2>
+        <p>Submit a listing URL or address through the public request flow. The request opens as a GitHub issue, then the home-evaluation workflow can produce a new public brief page.</p>
+        <p><a class="button" href="submit.html">Start a request</a></p>
+      </section>
     </main>
 
     <footer class="footer">
       <p>Research aid only. Verify facts with appropriate professionals before relying on any brief for an offer or purchase decision.</p>
     </footer>
+    <script src="assets/site.js"></script>
   </body>
 </html>

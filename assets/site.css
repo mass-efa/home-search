@@ -282,6 +282,101 @@ li + li {
   word-break: break-word;
 }
 
+.home-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.home-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.home-card h3 {
+  font-size: 1.15rem;
+}
+
+.home-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.home-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  background: #ece7dc;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.form-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field label {
+  font-weight: 750;
+}
+
+.field small {
+  color: var(--muted);
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  font: inherit;
+  padding: 11px 12px;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.generated-link {
+  display: none;
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.generated-link.is-visible {
+  display: block;
+}
+
+.copy-box {
+  width: 100%;
+  min-height: 220px;
+  margin-top: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
 .footer {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
@@ -293,7 +388,8 @@ li + li {
 
 @media (max-width: 820px) {
   .hero,
-  .split {
+  .split,
+  .home-list {
     grid-template-columns: 1fr;
   }
 

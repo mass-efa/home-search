@@ -24,6 +24,11 @@ Current public brief:
 
 - [8762 Paisley Drive NE, Seattle](homes/8762-paisley-drive-ne.html)
 
+Request a new evaluation:
+
+- [Public request page](submit.html)
+- [GitHub issue queue](https://github.com/mass-efa/home-search/issues)
+
 ## Evaluation Method
 
 The reusable home-evaluation skill is included in this repository:
@@ -38,8 +43,27 @@ The rubric is intentionally practical. Each brief should lead with the decision 
 This is a dependency-free static site. GitHub Pages can serve it directly from the `main` branch:
 
 - `index.html` is the home page.
+- `submit.html` is the public request page.
+- `data/homes.json` powers the published-evaluations list.
 - `homes/` contains public property briefs.
 - `skills/` contains the reusable analysis workflow.
+- `.github/ISSUE_TEMPLATE/` contains the public request template.
+- `.github/workflows/` contains the request acknowledgement workflow.
+
+## Request-To-Publication Workflow
+
+1. A visitor submits a listing URL or address on `submit.html`.
+2. The site opens a prefilled GitHub issue in this public repository.
+3. GitHub Actions labels and acknowledges the request.
+4. The `home-evaluation` skill is run against the request.
+5. The generated brief is published under `homes/`.
+6. `data/homes.json` is updated so the brief appears on the homepage.
+
+For the detailed workflow, see [docs/workflow.md](docs/workflow.md).
+
+## Automation Boundary
+
+The current version intentionally uses GitHub Issues as the intake queue because GitHub Pages is static and cannot safely hold private API keys or GitHub tokens in the browser. Fully automatic AI generation can be added later with a server-side or GitHub Actions runner using repository secrets and a review gate.
 
 ## Important Note
 

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Request A Home Evaluation</title>
+    <meta name="description" content="Submit a home for evaluation through the public home-search workflow.">
+    <link rel="stylesheet" href="assets/site.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="index.html">Home Search</a>
+        <div class="nav-links">
+          <a href="index.html">Home</a>
+          <a href="homes/8762-paisley-drive-ne.html">8762 Paisley Dr NE</a>
+          <a href="skills/home-evaluation/SKILL.md">Evaluation Skill</a>
+          <a href="https://github.com/mass-efa/home-search/issues">Request Queue</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <div class="hero-main">
+          <p class="eyebrow">Evaluation intake</p>
+          <h1>Request a new buyer brief.</h1>
+          <p class="lede">Paste a listing URL or address, add any buyer notes, and generate a public GitHub issue. The request can then be evaluated with the home-evaluation skill and published as a new page.</p>
+        </div>
+        <aside class="panel fact-panel">
+          <div class="status-pill">Public workflow</div>
+          <div class="fact-grid">
+            <div class="fact">
+              <span>Step 1</span>
+              <strong>Submit request</strong>
+            </div>
+            <div class="fact">
+              <span>Step 2</span>
+              <strong>Run skill</strong>
+            </div>
+            <div class="fact">
+              <span>Step 3</span>
+              <strong>Publish page</strong>
+            </div>
+            <div class="fact">
+              <span>Visibility</span>
+              <strong>Public</strong>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section">
+        <h2>Submit A House</h2>
+        <div class="callout warning">
+          <p><strong>Public note:</strong> this flow creates a GitHub issue in a public repository. Do not include private financing limits, personal identity details, or negotiation strategy unless you want them public.</p>
+        </div>
+        <form class="form-grid" data-request-form>
+          <div class="field">
+            <label for="listingUrl">Listing URL</label>
+            <input id="listingUrl" name="listingUrl" type="url" placeholder="https://www.redfin.com/..." autocomplete="url">
+            <small>Redfin, Zillow, Realtor, MLS link, or another public listing URL.</small>
+          </div>
+
+          <div class="field">
+            <label for="address">Address</label>
+            <input id="address" name="address" type="text" placeholder="123 Main St, Seattle, WA">
+            <small>Use the full address if you have it.</small>
+          </div>
+
+          <div class="field">
+            <label for="price">Known price / status</label>
+            <input id="price" name="price" type="text" placeholder="$2,000,000 active listing">
+            <small>Optional, but useful if the listing site is stale or gated.</small>
+          </div>
+
+          <div class="field">
+            <label for="notes">Buyer notes</label>
+            <textarea id="notes" name="notes" placeholder="What should the evaluation pay special attention to? Schools, commute, title risk, offer strategy, remodel concerns, financing, etc."></textarea>
+          </div>
+
+          <button class="button" type="submit">Generate request</button>
+        </form>
+
+        <div class="generated-link" data-generated-link>
+          <h3>Request Ready</h3>
+          <p>Open the GitHub issue link below, review the text, and submit it. That issue becomes the public queue item for evaluation and publishing.</p>
+          <p><a class="button" href="#" data-issue-link>Open GitHub issue</a></p>
+          <div class="field">
+            <label for="requestBody">Generated issue body</label>
+            <textarea id="requestBody" class="copy-box" data-request-body readonly></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>How A Request Becomes A Page</h2>
+        <ol>
+          <li>The form creates a public GitHub issue with the listing URL, address, and notes.</li>
+          <li>The issue is acknowledged and labeled by the repository workflow.</li>
+          <li>The home-evaluation skill is run against the request, using current listing, market, school, safety, tax, permit, and title sources where available.</li>
+          <li>The generated brief is added as an HTML page under `homes/` and listed in `data/homes.json`.</li>
+          <li>GitHub Pages republishes the site automatically from the `main` branch.</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Research aid only. Verify facts with appropriate professionals before relying on any brief for an offer or purchase decision.</p>
+    </footer>
+    <script src="assets/site.js"></script>
+  </body>
+</html>
