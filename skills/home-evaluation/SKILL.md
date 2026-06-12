@@ -1,13 +1,13 @@
 ---
 name: home-evaluation
-description: Evaluate homes for purchase using a repeatable buyer-focused workflow. Use when Michael asks Codex to assess a specific house, listing, address, property email, disclosure packet, neighborhood, comparable sale, price, offer strategy, schools, safety, appreciation, negotiation leverage, inspection risk, title risk, or home-buying decision.
+description: Evaluate homes for purchase using a repeatable buyer-focused workflow. Use when assessing a specific house, listing, address, property email, disclosure packet, neighborhood, comparable sale, price, offer strategy, schools, safety, appreciation, negotiation leverage, inspection risk, title risk, or home-buying decision.
 ---
 
 # Home Evaluation
 
 ## Overview
 
-Use this skill to evaluate candidate homes for Michael's home purchase process. Produce a practical buyer brief, save durable notes in the Personal Brain workspace, and separate facts, inferences, risks, and next actions.
+Use this skill to evaluate candidate homes in a home purchase process. Produce a practical buyer brief, save durable notes in the relevant workspace, and separate facts, inferences, risks, and next actions.
 
 ## Workflow
 
