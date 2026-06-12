@@ -173,8 +173,9 @@
         var labels = issue.labels || [];
         var labelNames = labels.map(function (label) { return label.name; });
         var isPublished = labelNames.indexOf("published") !== -1 || issue.state === "closed";
-        var stateLabel = isPublished ? "Published / closed" : "Queued";
-        var stateClass = isPublished ? "published" : "open";
+        var isAnalyzing = labelNames.indexOf("analyzing") !== -1;
+        var stateLabel = isPublished ? "Published / closed" : (isAnalyzing ? "Analyzing" : "Queued");
+        var stateClass = isPublished ? "published" : (isAnalyzing ? "ready" : "open");
         var address = parseSection(issue.body, "Address");
         var listingUrl = parseSection(issue.body, "Listing URL");
         var created = issue.created_at ? new Date(issue.created_at).toLocaleString(undefined, {

@@ -28,6 +28,7 @@
           <p class="lede">Queued requests appear here after they are submitted through the public site. A request is ready when it is marked published/closed and a brief appears in the published evaluations list.</p>
           <div class="hero-actions">
             <a class="button" href="submit.html">Submit another house</a>
+            <a class="button secondary" href="https://github.com/mass-efa/home-search/actions/workflows/start-analysis.yml">Start analysis job</a>
             <a class="button secondary" href="https://github.com/mass-efa/home-search/issues?q=label%3Ahome-evaluation">Open GitHub queue</a>
           </div>
         </div>
@@ -64,10 +65,17 @@
       <section class="section">
         <h2>How You Know It Is Ready</h2>
         <ul>
-          <li>The request issue will be commented on as it moves through the workflow.</li>
-          <li>When the public page is published, the issue should be closed or labeled `published`.</li>
+          <li><code>queued</code> means the request was received but analysis has not started.</li>
+          <li><code>analyzing</code> means the analysis job has been kicked off.</li>
+          <li>When the public page is published, the issue should be closed or labeled <code>published</code>.</li>
           <li>The new brief will appear on the homepage under published evaluations.</li>
         </ul>
+      </section>
+
+      <section class="section">
+        <h2>Kick Off Analysis</h2>
+        <p>For the current queued request, open the analysis workflow, choose <strong>Run workflow</strong>, and enter issue number <strong>1</strong>. That moves the request into <code>analyzing</code> status. The full AI-backed generation step still requires Codex or a backend runner to produce and publish the final brief.</p>
+        <p><a class="button" href="https://github.com/mass-efa/home-search/actions/workflows/start-analysis.yml">Open start-analysis workflow</a></p>
       </section>
     </main>
 

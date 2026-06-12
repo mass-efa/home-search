@@ -57,10 +57,11 @@ This is a dependency-free static site. GitHub Pages can serve it directly from t
 1. A visitor submits a listing URL or address on `submit.html`.
 2. The site opens a prefilled GitHub issue in this public repository.
 3. GitHub Actions labels and acknowledges the request.
-4. The `home-evaluation` skill is run against the request.
-5. The generated brief is published under `homes/`.
-6. `data/homes.json` is updated so the brief appears on the homepage.
-7. The request issue is closed or labeled `published` once the page is ready.
+4. The `Start home analysis` workflow can move the request from `queued` to `analyzing`.
+5. The `home-evaluation` skill is run against the request.
+6. The generated brief is published under `homes/`.
+7. `data/homes.json` is updated so the brief appears on the homepage.
+8. The request issue is closed or labeled `published` once the page is ready.
 
 For the detailed workflow, see [docs/workflow.md](docs/workflow.md).
 
