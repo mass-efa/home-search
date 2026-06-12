@@ -16,6 +16,12 @@
       .slice(0, 80) || "home-evaluation-request";
   }
 
+  function parseSection(body, heading) {
+    var pattern = new RegExp("## " + heading + "\\n([\\s\\S]*?)(?=\\n## |$)", "i");
+    var match = String(body || "").match(pattern);
+    return match ? match[1].trim() : "";
+  }
+
   async function loadHomeList() {
     var target = document.querySelector("[data-home-list]");
     if (!target) return;
@@ -60,8 +66,10 @@
     var result = document.querySelector("[data-generated-link]");
     var output = document.querySelector("[data-request-body]");
     var issueLink = document.querySelector("[data-issue-link]");
+    var fallbackCopy = document.querySelector("[data-fallback-copy]");
+    var directCopy = document.querySelector("[data-direct-copy]");
 
-    form.addEventListener("submit", function (event) {
+    form.addEventListener("submit", async function (event) {
       event.preventDefault();
       var data = new FormData(form);
       var listingUrl = String(data.get("listingUrl") || "").trim();
@@ -103,12 +111,98 @@
       url.searchParams.set("body", body);
 
       output.value = body;
+      issueLink.textContent = "Open GitHub issue";
       issueLink.href = url.toString();
+
+      var endpoint = window.HOME_SEARCH_SUBMIT_ENDPOINT || "";
+      if (endpoint) {
+        try {
+          var response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: title,
+              listingUrl: listingUrl,
+              address: address,
+              price: price,
+              notes: notes,
+              slug: slug,
+              body: body
+            })
+          });
+          if (!response.ok) throw new Error("Request failed");
+          var payload = await response.json();
+          if (payload.issueUrl) {
+            issueLink.href = payload.issueUrl;
+            issueLink.textContent = "Open submitted request";
+          }
+          if (fallbackCopy) fallbackCopy.hidden = true;
+          if (directCopy) directCopy.hidden = false;
+        } catch (error) {
+          if (fallbackCopy) fallbackCopy.hidden = false;
+          if (directCopy) directCopy.hidden = true;
+        }
+      } else {
+        if (fallbackCopy) fallbackCopy.hidden = false;
+        if (directCopy) directCopy.hidden = true;
+      }
+
       result.classList.add("is-visible");
       issueLink.focus();
     });
   }
 
+  async function loadRequestStatus() {
+    var target = document.querySelector("[data-request-status]");
+    if (!target) return;
+
+    try {
+      var response = await fetch("https://api.github.com/repos/mass-efa/home-search/issues?state=all&labels=home-evaluation&per_page=50", {
+        headers: { "Accept": "application/vnd.github+json" },
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error("Unable to load request status");
+      var issues = await response.json();
+
+      if (!issues.length) {
+        target.innerHTML = "<p>No evaluation requests yet.</p>";
+        return;
+      }
+
+      target.innerHTML = issues.map(function (issue) {
+        var labels = issue.labels || [];
+        var labelNames = labels.map(function (label) { return label.name; });
+        var isPublished = labelNames.indexOf("published") !== -1 || issue.state === "closed";
+        var stateLabel = isPublished ? "Published / closed" : "Queued";
+        var stateClass = isPublished ? "published" : "open";
+        var address = parseSection(issue.body, "Address");
+        var listingUrl = parseSection(issue.body, "Listing URL");
+        var created = issue.created_at ? new Date(issue.created_at).toLocaleString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit"
+        }) : "";
+
+        return [
+          '<article class="status-card">',
+          "<h3>" + escapeHtml(issue.title) + "</h3>",
+          "<p>" + escapeHtml(address && address !== "_Not provided_" ? address : listingUrl) + "</p>",
+          '<div class="home-meta">',
+          '<span class="tag ' + stateClass + '">' + escapeHtml(stateLabel) + "</span>",
+          created ? '<span class="tag">Submitted ' + escapeHtml(created) + "</span>" : "",
+          "</div>",
+          '<p style="margin-top:12px;"><a class="button secondary" href="' + escapeHtml(issue.html_url) + '">Open request</a></p>',
+          "</article>"
+        ].join("");
+      }).join("");
+    } catch (error) {
+      target.innerHTML = '<p class="error-text">Could not load request status from GitHub right now.</p>';
+    }
+  }
+
   loadHomeList();
+  loadRequestStatus();
   setupRequestForm();
 }());

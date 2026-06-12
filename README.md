@@ -27,6 +27,7 @@ Current public brief:
 Request a new evaluation:
 
 - [Public request page](submit.html)
+- [Request status page](requests.html)
 - [GitHub issue queue](https://github.com/mass-efa/home-search/issues)
 
 ## Evaluation Method
@@ -44,6 +45,7 @@ This is a dependency-free static site. GitHub Pages can serve it directly from t
 
 - `index.html` is the home page.
 - `submit.html` is the public request page.
+- `requests.html` is the public request-status page.
 - `data/homes.json` powers the published-evaluations list.
 - `homes/` contains public property briefs.
 - `skills/` contains the reusable analysis workflow.
@@ -58,12 +60,15 @@ This is a dependency-free static site. GitHub Pages can serve it directly from t
 4. The `home-evaluation` skill is run against the request.
 5. The generated brief is published under `homes/`.
 6. `data/homes.json` is updated so the brief appears on the homepage.
+7. The request issue is closed or labeled `published` once the page is ready.
 
 For the detailed workflow, see [docs/workflow.md](docs/workflow.md).
 
 ## Automation Boundary
 
 The current version intentionally uses GitHub Issues as the intake queue because GitHub Pages is static and cannot safely hold private API keys or GitHub tokens in the browser. Fully automatic AI generation can be added later with a server-side or GitHub Actions runner using repository secrets and a review gate.
+
+For the first step toward direct submission without the extra GitHub confirmation click, see [docs/direct-submit-backend.md](docs/direct-submit-backend.md).
 
 ## Important Note
 

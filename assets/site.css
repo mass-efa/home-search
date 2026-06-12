@@ -377,6 +377,51 @@ textarea {
   font-size: 0.9rem;
 }
 
+.status-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.status-card {
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+}
+
+.status-card h3 {
+  margin-bottom: 8px;
+}
+
+.status-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.status-card .home-meta {
+  margin-top: 12px;
+}
+
+.tag.open {
+  background: #fff0cf;
+  color: #7a4b00;
+}
+
+.tag.closed,
+.tag.published {
+  background: #e7f2eb;
+  color: var(--good);
+}
+
+.tag.ready {
+  background: #e3eef7;
+  color: #23506f;
+}
+
+.error-text {
+  color: var(--risk);
+}
+
 .footer {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;

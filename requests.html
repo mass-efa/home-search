@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Home Evaluation Request Status</title>
+    <meta name="description" content="Track queued and published home evaluation requests.">
+    <link rel="stylesheet" href="assets/site.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="index.html">Home Search</a>
+        <div class="nav-links">
+          <a href="index.html">Home</a>
+          <a href="submit.html">Request Evaluation</a>
+          <a href="homes/8762-paisley-drive-ne.html">8762 Paisley Dr NE</a>
+          <a href="https://github.com/mass-efa/home-search/issues?q=label%3Ahome-evaluation">GitHub Queue</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section class="hero">
+        <div class="hero-main">
+          <p class="eyebrow">Request queue</p>
+          <h1>Track evaluation status.</h1>
+          <p class="lede">Queued requests appear here after they are submitted through the public site. A request is ready when it is marked published/closed and a brief appears in the published evaluations list.</p>
+          <div class="hero-actions">
+            <a class="button" href="submit.html">Submit another house</a>
+            <a class="button secondary" href="https://github.com/mass-efa/home-search/issues?q=label%3Ahome-evaluation">Open GitHub queue</a>
+          </div>
+        </div>
+        <aside class="panel fact-panel">
+          <div class="status-pill">Live GitHub status</div>
+          <div class="fact-grid">
+            <div class="fact">
+              <span>Queued</span>
+              <strong>Open issue</strong>
+            </div>
+            <div class="fact">
+              <span>Ready</span>
+              <strong>Published page</strong>
+            </div>
+            <div class="fact">
+              <span>Updates</span>
+              <strong>Issue comments</strong>
+            </div>
+            <div class="fact">
+              <span>Source</span>
+              <strong>GitHub Issues</strong>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section">
+        <h2>Evaluation Requests</h2>
+        <div class="status-list" data-request-status>
+          <p>Loading request status...</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>How You Know It Is Ready</h2>
+        <ul>
+          <li>The request issue will be commented on as it moves through the workflow.</li>
+          <li>When the public page is published, the issue should be closed or labeled `published`.</li>
+          <li>The new brief will appear on the homepage under published evaluations.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Research aid only. Verify facts with appropriate professionals before relying on any brief for an offer or purchase decision.</p>
+    </footer>
+    <script src="assets/site.js"></script>
+  </body>
+</html>

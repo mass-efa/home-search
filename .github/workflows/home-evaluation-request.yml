@@ -18,25 +18,30 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
-            const labelName = "home-evaluation";
+            const labels = [
+              { name: "home-evaluation", color: "0f6b63", description: "Home evaluation request from the public site" },
+              { name: "queued", color: "fff0cf", description: "Evaluation request is queued" }
+            ];
 
-            try {
-              await github.rest.issues.createLabel({
-                owner,
-                repo,
-                name: labelName,
-                color: "0f6b63",
-                description: "Home evaluation request from the public site"
-              });
-            } catch (error) {
-              if (error.status !== 422) throw error;
+            for (const label of labels) {
+              try {
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+              } catch (error) {
+                if (error.status !== 422) throw error;
+              }
             }
 
             await github.rest.issues.addLabels({
               owner,
               repo,
               issue_number,
-              labels: [labelName]
+              labels: labels.map((label) => label.name)
             });
 
             const comments = await github.paginate(github.rest.issues.listComments, {
@@ -58,6 +63,9 @@ jobs:
               body: [
                 marker,
                 "Request received.",
+                "",
+                "You can track it on the public status page:",
+                "https://mass-efa.github.io/home-search/requests.html",
                 "",
                 "Next publishing steps:",
                 "",
