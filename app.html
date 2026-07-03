@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Home-Finding Buddy MVP</title>
+    <meta name="description" content="Private buyer workspace for learning preferences, reviewing listings, and capturing tour debriefs.">
+    <link rel="stylesheet" href="assets/site.css">
+  </head>
+  <body class="app-body">
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="#start">Home-Finding Buddy</a>
+        <div class="nav-links">
+          <a href="#start">Start</a>
+          <a href="#conversation">Brief</a>
+          <a href="#listings">Listings</a>
+          <a href="#debrief">Debrief</a>
+          <a href="#account">Account</a>
+          <a href="index.html">Public Site</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="app-shell">
+      <section class="app-flow-hero" id="start">
+        <div class="hero-copy">
+          <p class="eyebrow">Private buyer workspace</p>
+          <h1>Know what is worth touring, skipping, or investigating.</h1>
+          <p class="lede">The app learns from your search notes, listing reactions, and tour debriefs so every house gets judged against what actually matters.</p>
+          <div class="hero-actions">
+            <a class="button" data-primary-action href="#conversation">Build search brief</a>
+            <a class="button secondary" href="#listings">Review listing</a>
+          </div>
+        </div>
+
+        <aside class="next-step-panel" aria-label="Current focus">
+          <span class="panel-label">Current focus</span>
+          <strong data-flow-stage-title>Start with buyer context</strong>
+          <p data-flow-stage-detail>Add the basic search frame, then capture what you want in plain language.</p>
+          <div class="flow-meter" aria-label="Workspace progress">
+            <span data-flow-progress></span>
+          </div>
+          <div class="summary-pairs">
+            <div>
+              <span>Account</span>
+              <strong data-account-state>Local only</strong>
+            </div>
+            <div>
+              <span>Brief</span>
+              <strong data-brief-state>Not started</strong>
+            </div>
+            <div>
+              <span>Listings</span>
+              <strong data-listing-count>0</strong>
+            </div>
+            <div>
+              <span>Debriefs</span>
+              <strong data-debrief-count>0</strong>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="task-grid" aria-label="Primary tasks">
+        <a class="task-card" data-task-card="workspace" href="#workspace">
+          <span>1</span>
+          <strong>Set the search frame</strong>
+          <p>Save the basics: household, search area, budget, timeline, and agent context.</p>
+          <em data-task-status="workspace">Start here</em>
+        </a>
+        <a class="task-card" data-task-card="brief" href="#conversation">
+          <span>2</span>
+          <strong>Build or refresh the brief</strong>
+          <p>Talk through priorities, tradeoffs, risks, and the homes that changed your mind.</p>
+          <em data-task-status="brief">Not started</em>
+        </a>
+        <a class="task-card" data-task-card="listing" href="#listings">
+          <span>3</span>
+          <strong>Review a listing</strong>
+          <p>Paste the listing and get a fit, risk, and diligence read against the current brief.</p>
+          <em data-task-status="listing">Waiting on brief</em>
+        </a>
+        <a class="task-card" data-task-card="debrief" href="#debrief">
+          <span>4</span>
+          <strong>Debrief a tour</strong>
+          <p>Capture the drive-back reaction and turn it into better future recommendations.</p>
+          <em data-task-status="debrief">Waiting on listing</em>
+        </a>
+      </section>
+
+      <section class="dashboard-strip" aria-label="Workspace snapshot">
+        <article>
+          <span>Next best action</span>
+          <strong data-next-action>Start the buyer conversation.</strong>
+        </article>
+        <article>
+          <span>Search thesis</span>
+          <strong data-current-thesis>No search thesis yet.</strong>
+        </article>
+        <article>
+          <span>Latest listing read</span>
+          <strong data-latest-review>No listing reviewed yet.</strong>
+        </article>
+      </section>
+
+      <section class="workflow-shell" id="workspace">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">Search setup</p>
+            <h2>Start with the search frame</h2>
+            <p>The details here keep the rest of the workspace grounded.</p>
+          </div>
+          <button class="button secondary" type="button" data-reset-demo>Reset workspace</button>
+        </div>
+
+        <form class="form-grid workspace-form" data-workspace-form>
+          <div class="field">
+            <label for="householdName">Household</label>
+            <input id="householdName" name="householdName" type="text" placeholder="Michael and Trusha">
+          </div>
+          <div class="field">
+            <label for="searchArea">Search area</label>
+            <input id="searchArea" name="searchArea" type="text" placeholder="Seattle, Bellevue, Eastside">
+          </div>
+          <div class="field">
+            <label for="budgetRange">Budget range</label>
+            <input id="budgetRange" name="budgetRange" type="text" placeholder="$1.8M-$2.3M">
+          </div>
+          <div class="field">
+            <label for="timeline">Timeline</label>
+            <input id="timeline" name="timeline" type="text" placeholder="Actively touring">
+          </div>
+          <div class="field">
+            <label for="agentStatus">Human agent status</label>
+            <input id="agentStatus" name="agentStatus" type="text" placeholder="Working with an agent / self-directed / unsure">
+          </div>
+          <button class="button" type="submit">Save search frame</button>
+        </form>
+      </section>
+
+      <section class="section work-section" id="conversation">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">Search brief</p>
+            <h2>Talk through what matters</h2>
+            <p>The strongest brief comes from tradeoffs, reactions, worries, and disagreement.</p>
+          </div>
+          <div class="voice-actions">
+            <button class="button secondary" type="button" data-voice-start="conversationNotes">Start voice</button>
+            <button class="button secondary" type="button" data-voice-stop>Stop</button>
+          </div>
+        </div>
+        <div class="prompt-chips" aria-label="Conversation prompts">
+          <button type="button" data-prompt="Current life: ">Current life</button>
+          <button type="button" data-prompt="Future life: ">Future life</button>
+          <button type="button" data-prompt="Tradeoffs: ">Tradeoffs</button>
+          <button type="button" data-prompt="Homes we liked: ">Liked homes</button>
+          <button type="button" data-prompt="Homes we rejected: ">Rejected homes</button>
+          <button type="button" data-prompt="Hidden risks we worry about: ">Hidden risks</button>
+          <button type="button" data-prompt="Partner disagreement: ">Disagreement</button>
+        </div>
+        <div class="field">
+          <label for="conversationNotes">Search notes</label>
+          <textarea id="conversationNotes" data-conversation-notes placeholder="Example: We keep saying walkability matters, but the homes that excite us have quiet streets, privacy, and great hosting space. We are nervous about older systems, drainage, and surprise renovation costs."></textarea>
+        </div>
+        <div class="sticky-actions">
+          <button class="button" type="button" data-generate-brief>Generate search brief</button>
+          <button class="button secondary" type="button" data-save-conversation>Save notes</button>
+          <p class="voice-status" data-voice-status>Voice capture is idle.</p>
+        </div>
+      </section>
+
+      <section class="section work-section" id="brief">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">Working brief</p>
+            <h2>Buyer Search Brief</h2>
+            <p>This is the standard every listing and tour reaction gets judged against.</p>
+          </div>
+          <button class="button secondary" type="button" data-copy-brief>Copy brief</button>
+        </div>
+        <div class="brief-layout" data-brief-output>
+          <p class="empty-state">Generate a search brief from the buyer conversation.</p>
+        </div>
+        <div class="suggestion-list" data-suggestion-list></div>
+      </section>
+
+      <section class="section work-section" id="listings">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">Listing screen</p>
+            <h2>Review a home with the evaluation skill</h2>
+            <p>Use this when a saved search, portal, or agent sends a house that might be interesting.</p>
+          </div>
+        </div>
+        <div class="skill-note" aria-label="Evaluation rubric">
+          <strong>Home Evaluation Skill</strong>
+          <p>Every review creates a decision read, negotiation posture, diligence checklist, and rubric sections for schools, safety, comps, condition, title, finances, lifestyle, and physical-site risk. <span data-ai-backend-state>Server AI is not configured yet.</span></p>
+        </div>
+        <form class="form-grid app-form-compact" data-listing-form>
+          <div class="field">
+            <label for="listingUrl">Listing URL</label>
+            <input id="listingUrl" name="listingUrl" type="url" placeholder="https://www.redfin.com/...">
+          </div>
+          <div class="field">
+            <label for="listingAddress">Address</label>
+            <input id="listingAddress" name="listingAddress" type="text" placeholder="123 Main St, Seattle, WA">
+          </div>
+          <div class="field">
+            <label for="listingPrice">Price / status</label>
+            <input id="listingPrice" name="listingPrice" type="text" placeholder="$2,000,000 active">
+          </div>
+          <div class="field app-full">
+            <label for="listingNotes">Listing notes</label>
+            <textarea id="listingNotes" name="listingNotes" placeholder="Paste listing copy, observations, disclosure notes, inspection hints, comps, school notes, taxes, HOA/title details, or what caught your eye."></textarea>
+          </div>
+          <button class="button" type="submit">Review listing</button>
+        </form>
+        <div class="listing-stack" data-listing-stack>
+          <p class="empty-state">No listings reviewed yet.</p>
+        </div>
+      </section>
+
+      <section class="section work-section" id="debrief">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">Tour memory</p>
+            <h2>Debrief while the reaction is fresh</h2>
+            <p>The debrief updates what the product should pay attention to next time.</p>
+          </div>
+          <div class="voice-actions">
+            <button class="button secondary" type="button" data-voice-start="debriefNotes">Start voice</button>
+            <button class="button secondary" type="button" data-voice-stop>Stop</button>
+          </div>
+        </div>
+        <form class="form-grid" data-debrief-form>
+          <div class="field">
+            <label for="debriefListing">Listing</label>
+            <select id="debriefListing" name="listingId" data-debrief-listing></select>
+          </div>
+          <div class="field">
+            <label for="debriefNotes">Debrief notes</label>
+            <textarea id="debriefNotes" name="debriefNotes" placeholder="What felt better than expected? What felt wrong? What did you disagree on? Would you be excited to go back tomorrow?"></textarea>
+          </div>
+          <button class="button" type="submit">Save debrief</button>
+        </form>
+        <div class="debrief-output" data-debrief-output>
+          <p class="empty-state">No tour debrief saved yet.</p>
+        </div>
+      </section>
+
+      <section class="section auth-panel" id="account">
+        <div class="section-heading-row">
+          <div>
+            <p class="section-kicker">Account</p>
+            <h2>Save this workspace</h2>
+            <p>Use a magic link to sync this browser workspace with Supabase.</p>
+          </div>
+          <span class="status-pill" data-sync-status>Local only</span>
+        </div>
+        <div class="auth-grid">
+          <form class="form-grid" data-auth-form>
+            <div class="field">
+              <label for="authEmail">Email</label>
+              <input id="authEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email">
+            </div>
+            <button class="button" type="submit">Send magic link</button>
+          </form>
+          <div class="auth-card">
+            <span>Signed in as</span>
+            <strong data-auth-email>Not signed in</strong>
+            <p data-auth-detail>Configure Supabase to enable cloud sync.</p>
+            <div class="hero-actions compact-actions" data-auth-actions>
+              <button class="button secondary" type="button" data-sync-now>Sync now</button>
+              <button class="button secondary" type="button" data-sign-out>Sign out</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Research aid only. Verify facts with qualified professionals before relying on any brief for an offer or purchase decision.</p>
+    </footer>
+
+    <script src="assets/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/buddy-app.js"></script>
+  </body>
+</html>

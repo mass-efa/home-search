@@ -24,6 +24,18 @@ Current public brief:
 
 - [8762 Paisley Drive NE, Seattle](homes/8762-paisley-drive-ne.html)
 
+First buyer-usable MVP:
+
+- [Home-Finding Buddy MVP](app.html)
+
+The MVP is local-first: it saves the buyer workspace in browser storage, generates a Buyer Search Brief, reviews listings against that brief, and captures tour debriefs with voice or text.
+
+Auth and database setup:
+
+- [Auth and database setup](docs/auth-and-database.md)
+- [AI backend setup](docs/ai-backend.md)
+- [Supabase schema](supabase/schema.sql)
+
 Request a new evaluation:
 
 - [Public request page](submit.html)
@@ -70,6 +82,10 @@ For the detailed workflow, see [docs/workflow.md](docs/workflow.md).
 The current version intentionally uses GitHub Issues as the intake queue because GitHub Pages is static and cannot safely hold private API keys or GitHub tokens in the browser. Fully automatic AI generation can be added later with a server-side or GitHub Actions runner using repository secrets and a review gate.
 
 For the first step toward direct submission without the extra GitHub confirmation click, see [docs/direct-submit-backend.md](docs/direct-submit-backend.md).
+
+For the broader path from this static workflow to a public service, see [docs/service-roadmap.md](docs/service-roadmap.md).
+
+For the first buyer-usable MVP, see [docs/mvp-spec.md](docs/mvp-spec.md).
 
 ## Important Note
 
