@@ -160,10 +160,15 @@ function extractOutputText(data: Record<string, unknown>) {
   return "";
 }
 
+function getOpenAiApiKey() {
+  return Deno.env.get("OPENAI_API_KEY") ||
+    Deno.env.get("Home_search_oai_key") || "";
+}
+
 async function callOpenAi(input: Record<string, unknown>) {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  const apiKey = getOpenAiApiKey();
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+    throw new Error("OpenAI API key is not configured");
   }
 
   const model = Deno.env.get("OPENAI_MODEL") || DEFAULT_MODEL;
@@ -305,8 +310,8 @@ async function callIndependentEvaluator(
   candidate: Record<string, unknown>,
   inputHash: string
 ) {
-  const apiKey = Deno.env.get("OPENAI_API_KEY");
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured");
+  const apiKey = getOpenAiApiKey();
+  if (!apiKey) throw new Error("OpenAI API key is not configured");
   const model = Deno.env.get("OPENAI_EVALUATOR_MODEL") ||
     Deno.env.get("OPENAI_MODEL") || DEFAULT_MODEL;
   const schema = {

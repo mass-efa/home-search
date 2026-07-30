@@ -48,6 +48,10 @@ supabase secrets set AUTOMATED_APPROVAL_ENABLED="false"
 supabase secrets set ALLOWED_ORIGIN="http://127.0.0.1:8788"
 ```
 
+The deployed alpha also accepts the existing custom secret name
+`Home_search_oai_key`. `OPENAI_API_KEY` remains the preferred portable name for
+new environments.
+
 For production, set `ALLOWED_ORIGIN` to:
 
 ```bash
