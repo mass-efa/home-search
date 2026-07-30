@@ -215,6 +215,26 @@
             <label for="listingNotes">Listing notes</label>
             <textarea id="listingNotes" name="listingNotes" placeholder="Paste listing copy, observations, disclosure notes, inspection hints, comps, school notes, taxes, HOA/title details, or what caught your eye."></textarea>
           </div>
+          <div class="field app-full">
+            <label for="listingQuestions">What should we especially investigate?</label>
+            <textarea id="listingQuestions" name="listingQuestions" required placeholder="Example: Is the asking price supported? What does the inspection imply about near-term costs? How noisy is the street at commute time?"></textarea>
+          </div>
+          <div class="field">
+            <label for="decisionStage">Decision stage</label>
+            <select id="decisionStage" name="decisionStage">
+              <option value="considering-tour">Considering a tour</option>
+              <option value="pre-offer">Considering an offer</option>
+              <option value="active-offer">Preparing an offer</option>
+              <option value="under-contract">Under contract</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="analysisDepth">Analysis depth</label>
+            <select id="analysisDepth" name="analysisDepth">
+              <option value="decision-brief">Decision Brief</option>
+              <option value="deep-decision-pack">Deep Decision Pack</option>
+            </select>
+          </div>
           <button class="button" type="submit">Review listing</button>
         </form>
         <div class="listing-stack" data-listing-stack>

@@ -1,0 +1,294 @@
+{
+  "schemaVersion": "approval-candidate/0.1",
+  "contractVersion": "decision-pack/0.1",
+  "analysisVersion": "analysis/golden-001",
+  "candidateHash": "sha256:golden-candidate-001",
+  "state": "evaluable",
+  "subject": {
+    "address": "100 Example Ave, Seattle, WA 98101",
+    "parcelId": "SYNTHETIC-100",
+    "identityResolved": true,
+    "listingUrl": "https://example.invalid/listing/100",
+    "status": "active",
+    "ask": 1000000,
+    "statusCheckedAt": "2026-07-29T18:00:00Z",
+    "beds": 4,
+    "baths": 2.5,
+    "finishedSf": 2500,
+    "lotSf": 6000,
+    "yearBuilt": 1950
+  },
+  "buyer": {
+    "priorities": [
+      {
+        "id": "priority-yard",
+        "text": "Usable private yard"
+      }
+    ],
+    "questions": [
+      {
+        "id": "question-price",
+        "text": "Is the asking price supported?",
+        "status": "answered",
+        "answer": "The evidence supports a directional range near the ask, with meaningful uncertainty.",
+        "claimIds": [
+          "claim-value"
+        ],
+        "decisionImpact": "Sets price discipline.",
+        "nextAction": "Verify live activity with the buyer agent."
+      },
+      {
+        "id": "question-roof",
+        "text": "What remains unknown about the roof?",
+        "status": "needs_professional_verification",
+        "answer": "The visible surface appeared serviceable, but remaining life is not established.",
+        "claimIds": [
+          "claim-roof"
+        ],
+        "decisionImpact": "Could change the capital reserve.",
+        "nextAction": "Obtain a licensed roofer evaluation."
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "source-listing",
+      "type": "listing-derived",
+      "title": "Synthetic listing",
+      "url": "https://example.invalid/listing/100",
+      "accessedAt": "2026-07-29",
+      "effectiveAt": "2026-07-29"
+    },
+    {
+      "id": "source-record",
+      "type": "official-record",
+      "title": "Synthetic parcel record",
+      "url": "https://example.invalid/parcel/100",
+      "accessedAt": "2026-07-29",
+      "effectiveAt": "2026-01-01"
+    },
+    {
+      "id": "source-inspection",
+      "type": "transaction-document",
+      "title": "Synthetic inspection",
+      "privateFileId": "file/synthetic-inspection-v1",
+      "fileHash": "sha256:synthetic-inspection-v1",
+      "accessedAt": "2026-07-29",
+      "effectiveAt": "2026-07-20"
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-identity",
+      "type": "fact",
+      "materiality": "critical",
+      "text": "The subject is the single-family property at 100 Example Ave.",
+      "sourceIds": [
+        "source-record",
+        "source-listing"
+      ],
+      "checkedAt": "2026-07-29",
+      "confidence": "high",
+      "conflict": false
+    },
+    {
+      "id": "claim-value",
+      "type": "judgment",
+      "materiality": "critical",
+      "text": "Comparable evidence supports a directional range of $950,000 to $1,025,000.",
+      "sourceIds": [
+        "source-listing"
+      ],
+      "checkedAt": "2026-07-29",
+      "confidence": "moderate",
+      "conflict": false
+    },
+    {
+      "id": "claim-roof",
+      "type": "fact",
+      "materiality": "material",
+      "text": "The inspection reported no visible active roof leak; remaining life was not established.",
+      "sourceIds": [
+        "source-inspection"
+      ],
+      "documentLocator": {
+        "fileId": "file/synthetic-inspection-v1",
+        "fileHash": "sha256:synthetic-inspection-v1",
+        "pdfPage": 12,
+        "pageExists": true,
+        "visuallyVerified": true
+      },
+      "checkedAt": "2026-07-29",
+      "confidence": "moderate",
+      "conflict": false
+    },
+    {
+      "id": "claim-fit",
+      "type": "judgment",
+      "materiality": "material",
+      "text": "The yard supports the buyer's stated outdoor priority.",
+      "sourceIds": [
+        "source-listing"
+      ],
+      "buyerPriorityIds": [
+        "priority-yard"
+      ],
+      "checkedAt": "2026-07-29",
+      "confidence": "moderate",
+      "conflict": false
+    }
+  ],
+  "comparables": {
+    "numericOfferGuidanceEnabled": true,
+    "subject": {
+      "price": 1000000,
+      "finishedSf": 2500,
+      "pricePerFinishedSf": 400
+    },
+    "records": [
+      {
+        "id": "comp-1",
+        "address": "1 Comp St",
+        "saleDate": "2026-06-01",
+        "salePrice": 950000,
+        "finishedSf": 2400,
+        "pricePerFinishedSf": 395.8333333333,
+        "sourceId": "source-listing",
+        "inclusion": "primary",
+        "adjustments": {
+          "livingArea": 10000,
+          "lotUsability": 20000
+        },
+        "adjustedValue": 980000,
+        "weight": 0.22
+      },
+      {
+        "id": "comp-2",
+        "address": "2 Comp St",
+        "saleDate": "2026-05-15",
+        "salePrice": 1020000,
+        "finishedSf": 2600,
+        "pricePerFinishedSf": 392.3076923077,
+        "sourceId": "source-listing",
+        "inclusion": "primary",
+        "adjustments": {
+          "livingArea": -10000,
+          "condition": -10000
+        },
+        "adjustedValue": 1000000,
+        "weight": 0.22
+      },
+      {
+        "id": "comp-3",
+        "address": "3 Comp St",
+        "saleDate": "2026-04-20",
+        "salePrice": 990000,
+        "finishedSf": 2450,
+        "pricePerFinishedSf": 404.0816326531,
+        "sourceId": "source-listing",
+        "inclusion": "primary",
+        "adjustments": {
+          "livingArea": 5000,
+          "privacy": 15000
+        },
+        "adjustedValue": 1010000,
+        "weight": 0.2
+      },
+      {
+        "id": "comp-4",
+        "address": "4 Comp St",
+        "saleDate": "2026-03-10",
+        "salePrice": 975000,
+        "finishedSf": 2550,
+        "pricePerFinishedSf": 382.3529411765,
+        "sourceId": "source-listing",
+        "inclusion": "secondary",
+        "adjustments": {
+          "livingArea": -5000,
+          "lotUsability": 20000
+        },
+        "adjustedValue": 990000,
+        "weight": 0.18
+      },
+      {
+        "id": "comp-5",
+        "address": "5 Comp St",
+        "saleDate": "2026-02-01",
+        "salePrice": 940000,
+        "finishedSf": 2350,
+        "pricePerFinishedSf": 400,
+        "sourceId": "source-listing",
+        "inclusion": "secondary",
+        "adjustments": {
+          "livingArea": 15000,
+          "condition": 25000
+        },
+        "adjustedValue": 980000,
+        "weight": 0.18
+      }
+    ],
+    "weightedAdjustedValue": 992200,
+    "scenarios": {
+      "low": {
+        "value": 950000,
+        "inputVersion": "scenario/low-1",
+        "recalculated": true
+      },
+      "base": {
+        "value": 992200,
+        "inputVersion": "scenario/base-1",
+        "recalculated": true
+      },
+      "high": {
+        "value": 1025000,
+        "inputVersion": "scenario/high-1",
+        "recalculated": true
+      }
+    }
+  },
+  "recommendation": {
+    "decision": "investigate",
+    "confidence": "moderate",
+    "supportingClaimIds": [
+      "claim-value",
+      "claim-fit"
+    ],
+    "counterevidenceClaimIds": [
+      "claim-roof"
+    ],
+    "changeConditions": [
+      "Roof evaluation shows a material near-term replacement need."
+    ],
+    "nextActions": [
+      "Verify live listing activity.",
+      "Obtain a roof evaluation.",
+      "Review the five primary and secondary comparables."
+    ],
+    "professionalBoundaries": [
+      "This is not an appraisal or inspection."
+    ]
+  },
+  "privacy": {
+    "ownerUserId": "user-golden",
+    "requestUserId": "user-golden",
+    "crossUserDataDetected": false,
+    "shareProjectionAuthorized": true,
+    "privateFieldsInShare": []
+  },
+  "security": {
+    "promptInjectionDetected": false,
+    "untrustedInstructionsExecuted": false
+  },
+  "render": {
+    "analysisVersion": "analysis/golden-001",
+    "uncataloguedClaims": 0,
+    "uncataloguedNumbers": 0,
+    "citationsPreserved": true
+  },
+  "evaluator": {
+    "version": "evaluator/0.1",
+    "candidateHash": "sha256:golden-candidate-001",
+    "result": "pass",
+    "defects": []
+  }
+}

@@ -351,6 +351,9 @@
           brief: state.brief,
           workspace: state.workspace,
           conversationNotes: state.conversationNotes,
+          focusQuestions: listing.questions ? [listing.questions] : [],
+          decisionStage: listing.decisionStage || "considering-tour",
+          analysisDepth: listing.analysisDepth || "decision-brief",
           rubricVersion: "home-evaluation:v1"
         })
       });
@@ -358,15 +361,39 @@
       if (!response.ok) {
         throw new Error(data.error || "AI evaluation failed");
       }
-      listing.aiEvaluation = data.evaluation;
+      listing.aiCandidate = data.evaluation || null;
       listing.aiEvaluationId = data.evaluationId || null;
       listing.aiModel = data.model || "";
-      listing.aiStatus = "Server AI evaluation complete";
+      listing.approvalDecision = data.approvalDecision || null;
+      if (listing.approvalDecision && listing.approvalDecision.outcome === "auto_approved") {
+        listing.aiEvaluation = data.evaluation;
+        listing.aiStatus = "Evidence-checked Decision Brief approved";
+      } else {
+        listing.aiEvaluation = null;
+        listing.aiStatus = approvalStatusCopy(listing.approvalDecision);
+      }
       saveState();
     } catch (error) {
       listing.aiStatus = "AI failed: " + (error && error.message ? error.message : "Unknown error");
       saveState();
     }
+  }
+
+  function approvalStatusCopy(decision) {
+    if (!decision) return "The server did not return an approval decision. Nothing was released.";
+    if (decision.outcome === "insufficient_evidence") {
+      return "Needs more evidence before a Decision Brief can be released.";
+    }
+    if (decision.outcome === "needs_review") {
+      return "Quality exception: the evidence or analysis needs correction and another validation run.";
+    }
+    if (decision.outcome === "failed") {
+      return "Validation could not complete. No Decision Brief was released.";
+    }
+    if (decision.outcome === "auto_approved") {
+      return "Every critical automated gate passed.";
+    }
+    return "Decision Brief is not available.";
   }
 
   function splitSignals(notes) {
@@ -498,6 +525,9 @@
       address: text(formData.get("listingAddress")),
       price: text(formData.get("listingPrice")),
       notes: text(formData.get("listingNotes")),
+      questions: text(formData.get("listingQuestions")),
+      decisionStage: text(formData.get("decisionStage")),
+      analysisDepth: text(formData.get("analysisDepth")),
       createdAt: new Date().toISOString(),
       debriefs: []
     };
@@ -1180,7 +1210,7 @@
     target.innerHTML = state.listings.map(function (listing) {
       var review = listing.review || buildListingReview(listing);
       if (!review.skillEvaluation) review.skillEvaluation = buildSkillEvaluation(listing, review);
-      var skillEvaluation = listing.aiEvaluation || review.skillEvaluation;
+      var skillEvaluation = review.skillEvaluation;
       return [
         '<article class="listing-card">',
         '<div class="listing-card-head">',
@@ -1192,6 +1222,8 @@
         "</div>",
         "<p>" + escapeHtml(review.summary) + "</p>",
         renderAiEvaluationAction(listing),
+        renderApprovalDecision(listing),
+        listing.aiEvaluation ? renderApprovedEvaluation(listing.aiEvaluation) : "",
         renderSkillEvaluation(skillEvaluation),
         reviewList("Fit signals", review.matches),
         reviewList("Immediate concerns", review.concerns),
@@ -1211,18 +1243,45 @@
   function renderAiEvaluationAction(listing) {
     var endpoint = getAiConfig().endpoint;
     var ready = isAiReady();
-    var hasAi = Boolean(listing.aiEvaluation);
+    var hasAi = Boolean(listing.approvalDecision);
     var disabled = ready ? "" : " disabled";
-    var buttonLabel = hasAi ? "Refresh server AI evaluation" : "Run server AI evaluation";
+    var buttonLabel = hasAi ? "Refresh evidence-checked brief" : "Build evidence-checked brief";
     var hint = !endpoint
       ? "Set HOME_SEARCH_AI_EVALUATION_ENDPOINT after deploying the Supabase Edge Function."
-      : (!remote.user ? "Sign in to run private server-side AI." : "Uses the backend AI pipeline and saves the result.");
+      : (!remote.user ? "Sign in to run a private evidence-checked analysis." : "The result is released only when every critical automated gate passes.");
     if (listing.aiStatus) hint = listing.aiStatus;
     return [
       '<div class="ai-action">',
       '<button class="button secondary" type="button" data-run-ai-evaluation="' + escapeHtml(listing.id) + '"' + disabled + ">" + escapeHtml(buttonLabel) + "</button>",
       "<span>" + escapeHtml(hint) + "</span>",
       "</div>"
+    ].join("");
+  }
+
+  function renderApprovalDecision(listing) {
+    var decision = listing.approvalDecision;
+    if (!decision) return "";
+    var labels = {
+      auto_approved: "Automatically approved",
+      needs_review: "Quality exception",
+      insufficient_evidence: "Needs more evidence",
+      failed: "Validation failed"
+    };
+    var reasons = Array.isArray(decision.reasonCodes) ? decision.reasonCodes : [];
+    return [
+      '<section class="approval-panel" data-outcome="' + escapeHtml(decision.outcome) + '">',
+      '<div><span>Evidence-checked Decision Brief</span><strong>' + escapeHtml(labels[decision.outcome] || "Not released") + "</strong></div>",
+      "<p>" + escapeHtml(approvalStatusCopy(decision)) + "</p>",
+      reasons.length ? '<p class="approval-reasons">Recorded checks: ' + escapeHtml(reasons.join(", ")) + "</p>" : "",
+      decision.decidedAt ? "<small>Validated " + escapeHtml(dateLabel(decision.decidedAt)) + "</small>" : "",
+      "</section>"
+    ].join("");
+  }
+
+  function renderApprovedEvaluation(evaluation) {
+    return [
+      '<div class="approved-divider"><span>Released Decision Brief</span></div>',
+      renderSkillEvaluation(evaluation)
     ].join("");
   }
 

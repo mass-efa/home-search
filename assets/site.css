@@ -974,6 +974,51 @@ textarea {
   font-size: 0.9rem;
 }
 
+.approval-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #d4a72c;
+  background: #fff8df;
+}
+
+.approval-panel[data-outcome="auto_approved"] {
+  border-color: #79a98a;
+  background: #e7f2eb;
+}
+
+.approval-panel[data-outcome="failed"] {
+  border-color: #bb6b65;
+  background: #fff0ee;
+}
+
+.approval-panel div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.approval-panel span,
+.approval-panel small,
+.approval-reasons {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.approval-panel p {
+  margin: 0;
+}
+
+.approved-divider {
+  margin-top: 18px;
+  color: var(--good);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .skill-evaluation {
   display: grid;
   gap: 14px;

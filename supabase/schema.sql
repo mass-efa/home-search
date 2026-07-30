@@ -78,10 +78,20 @@ create table if not exists public.home_buddy_ai_evaluations (
   listing_snapshot jsonb not null default '{}'::jsonb,
   buyer_context jsonb not null default '{}'::jsonb,
   evaluation jsonb not null default '{}'::jsonb,
+  candidate jsonb not null default '{}'::jsonb,
+  validator_results jsonb not null default '[]'::jsonb,
+  independent_evaluation jsonb not null default '{}'::jsonb,
+  approval_decision jsonb not null default '{}'::jsonb,
   error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.home_buddy_ai_evaluations
+  add column if not exists candidate jsonb not null default '{}'::jsonb,
+  add column if not exists validator_results jsonb not null default '[]'::jsonb,
+  add column if not exists independent_evaluation jsonb not null default '{}'::jsonb,
+  add column if not exists approval_decision jsonb not null default '{}'::jsonb;
 
 create index if not exists home_buddy_ai_evaluations_owner_id_idx
   on public.home_buddy_ai_evaluations (owner_id);
@@ -108,22 +118,9 @@ create policy "home buddy owners can read own ai evaluations"
 
 drop policy if exists "home buddy owners can insert own ai evaluations"
   on public.home_buddy_ai_evaluations;
-create policy "home buddy owners can insert own ai evaluations"
-  on public.home_buddy_ai_evaluations
-  for insert
-  with check (auth.uid() = owner_id);
 
 drop policy if exists "home buddy owners can update own ai evaluations"
   on public.home_buddy_ai_evaluations;
-create policy "home buddy owners can update own ai evaluations"
-  on public.home_buddy_ai_evaluations
-  for update
-  using (auth.uid() = owner_id)
-  with check (auth.uid() = owner_id);
 
 drop policy if exists "home buddy owners can delete own ai evaluations"
   on public.home_buddy_ai_evaluations;
-create policy "home buddy owners can delete own ai evaluations"
-  on public.home_buddy_ai_evaluations
-  for delete
-  using (auth.uid() = owner_id);
