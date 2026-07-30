@@ -46,7 +46,8 @@
         activeView: "",
         requestStep: 1,
         activeListingId: null,
-        pendingAnalysisListingId: null
+        pendingAnalysisListingId: null,
+        authRetryAfter: null
       }, saved || {});
       ui.pendingAnalysisListingId = ui.pendingAnalysisListingId || localStorage.getItem(PENDING_ANALYSIS_KEY) || null;
       return ui;
@@ -55,7 +56,8 @@
         activeView: "",
         requestStep: 1,
         activeListingId: null,
-        pendingAnalysisListingId: null
+        pendingAnalysisListingId: null,
+        authRetryAfter: null
       };
     }
   }
@@ -394,6 +396,10 @@
       setRemoteStatus("Enter an email");
       return;
     }
+    if (uiState.authRetryAfter && Date.now() < uiState.authRetryAfter) {
+      setRemoteStatus("Email limit reached. Please try again in about an hour.");
+      return;
+    }
     setRemoteStatus("Sending magic link");
     trackFunnel("auth_started", { method: "magic_link" });
     var result = await remote.client.auth.signInWithOtp({
@@ -404,9 +410,17 @@
     });
     if (result.error) {
       trackFunnel("auth_link_requested", { success: false });
-      setRemoteStatus("Magic link failed: " + result.error.message);
+      if (includesAny(result.error.message, ["rate limit", "too many"])) {
+        uiState.authRetryAfter = Date.now() + (60 * 60 * 1000);
+        saveUiState();
+        setRemoteStatus("Email limit reached. Please try again in about an hour.");
+      } else {
+        setRemoteStatus("We couldn’t send the sign-in email. Please try again.");
+      }
       return;
     }
+    uiState.authRetryAfter = null;
+    saveUiState();
     setRemoteStatus("Magic link sent");
     trackFunnel("auth_link_requested", { success: true });
     trackFunnel("auth_link_sent", { method: "magic_link" });
@@ -1418,6 +1432,7 @@
     var authDetail = document.querySelector("[data-auth-detail]");
     var authForm = document.querySelector("[data-auth-form]");
     var authActions = document.querySelector("[data-auth-actions]");
+    var authSubmit = authForm ? authForm.querySelector('button[type="submit"]') : null;
     var syncButton = document.querySelector("[data-sync-now]");
     var signOutButton = document.querySelector("[data-sign-out]");
 
@@ -1435,6 +1450,11 @@
       : "Configure Supabase URL and anon key in assets/config.js to enable cloud sync.";
 
     if (authForm) authForm.hidden = Boolean(remote.user);
+    if (authSubmit) {
+      var retryBlocked = Boolean(uiState.authRetryAfter && Date.now() < uiState.authRetryAfter);
+      authSubmit.disabled = retryBlocked;
+      authSubmit.textContent = retryBlocked ? "Try again in about an hour" : "Email me a sign-in link";
+    }
     if (authActions) authActions.hidden = !remote.user;
     if (syncButton) syncButton.disabled = !remote.user;
     if (signOutButton) signOutButton.disabled = !remote.user;
