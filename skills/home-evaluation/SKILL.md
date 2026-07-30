@@ -32,6 +32,7 @@ Then include concise sections for schools, safety, area value trend, property va
 
 ## Standards
 
+- P0 comp-table requirement: every comparable-sales table must show the subject and each comp's price per finished square foot, calculated from the displayed price and finished area. Keep $/sf visible even when the primary valuation method is explicit feature adjustment, and label it as a cross-check rather than the sole valuation method.
 - Prefer official/primary sources for school district boundaries, police/crime data, tax records, permits, listing facts, and title/disclosure documents.
 - Use Redfin/Zillow/Realtor/MLS-derived data for market color, but label third-party estimates and small-sample neighborhood medians as noisy.
 - Never imply legal, inspection, financing, or appraisal certainty. Name what a buyer agent, inspector, lender, title officer, or attorney should verify.

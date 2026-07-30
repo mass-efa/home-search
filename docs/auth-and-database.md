@@ -25,7 +25,13 @@ For local testing, set the redirect URL to your local page:
 window.HOME_SEARCH_AUTH_REDIRECT_URL = "http://127.0.0.1:8788/app.html";
 ```
 
-6. In Supabase Auth settings, add the deployed app URL and local test URL to allowed redirect URLs.
+6. In Supabase Auth settings, add the deployed app and reviewer URLs, plus
+   their local test equivalents, to allowed redirect URLs:
+
+   - `https://mass-efa.github.io/home-search/app.html`
+   - `https://mass-efa.github.io/home-search/review.html`
+   - `http://127.0.0.1:8788/app.html`
+   - `http://127.0.0.1:8788/review.html`
 
 ## Current Persistence Model
 
@@ -63,3 +69,16 @@ Do not put a Supabase service-role key in `assets/config.js` or any browser-deli
 - After sign-in, the app loads the newest cloud workspace if it is newer than local browser data.
 - If the user already has local data and no cloud workspace, the app uploads the local workspace.
 - Edits are saved locally immediately and synced to Supabase with a short debounce.
+
+## Evaluation Privacy Boundary
+
+Authenticated buyers do not read `home_buddy_ai_evaluations` directly. That
+table contains internal drafts, model output, validator results, and review
+evidence. Buyers can read only:
+
+- their safe request status in `home_buddy_evaluation_requests`; and
+- immutable, non-withdrawn reports in `home_buddy_released_results`.
+
+Migration `202607300002_request_review_release.sql` removes the earlier
+owner-read policy from the internal evaluation table. Apply it before inviting
+buyers into the reviewed-report workflow.

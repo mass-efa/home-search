@@ -123,3 +123,38 @@ The next improvement is an evidence-gathering job before the model call:
 - Comparable sales collection
 
 That will turn the backend from a structured AI screening read into a source-backed home evaluation pipeline.
+
+## First-Five Review And Release Path
+
+The first-five-user release wraps the evaluation in a durable request:
+
+1. `evaluate-home` verifies the signed-in user and workspace ownership.
+2. It creates or resumes an owner-scoped evaluation request.
+3. Internal candidates, validators, and evaluator findings remain in
+   `home_buddy_ai_evaluations`, which buyers cannot query.
+4. Buyers read safe status from `home_buddy_evaluation_requests`.
+5. A report becomes buyer-visible only through an immutable row in
+   `home_buddy_released_results`.
+
+With `AUTOMATED_APPROVAL_ENABLED=false`, a fully passing candidate moves to
+`in_review`. Manual release is only a delivery gate: it can release a candidate
+that already passed every validator and independent evaluation. It cannot
+override a failed evidence, privacy, identity, coverage, or advice-boundary
+check.
+
+Apply `supabase/migrations/202607300002_request_review_release.sql` before
+deploying the updated function or reviewer workspace.
+
+Provision reviewers through a privileged SQL/admin session, never through
+browser-editable user metadata:
+
+```sql
+insert into public.home_buddy_staff_roles (user_id, role)
+values ('USER_UUID', 'release_manager')
+on conflict (user_id)
+do update set role = excluded.role, active = true;
+```
+
+The private reviewer surface is `review.html`. It uses only the public Supabase
+anon key; row-level security protects queue reads, and the release function
+rechecks staff authorization and every release prerequisite.
