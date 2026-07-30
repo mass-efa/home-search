@@ -9,9 +9,17 @@ The browser still creates an instant local screening read. When the backend is c
 1. The signed-in browser calls a Supabase Edge Function.
 2. The Edge Function verifies the Supabase auth token.
 3. The function sends listing context, buyer brief, workspace context, and the `home-evaluation` rubric to the OpenAI Responses API.
-4. The model returns structured JSON with the required evaluation sections.
-5. The function saves the result to `public.home_buddy_ai_evaluations`.
-6. The app stores the returned evaluation in the local workspace state for immediate display.
+4. The generator returns structured JSON with the required evaluation sections.
+5. The function builds an immutable Decision Brief candidate, runs deterministic
+   validators, and runs a separately prompted independent evaluator against the
+   same candidate hash.
+6. The fail-closed policy engine records `auto_approved`, `needs_review`,
+   `insufficient_evidence`, or `failed`.
+7. The function saves the candidate, validator results, independent evaluation,
+   and approval manifest to `public.home_buddy_ai_evaluations`.
+8. The browser displays the server result only when it is `auto_approved`.
+   Otherwise it shows the safe exception state and preserves the separate local
+   screening read.
 
 ## Files
 
@@ -35,8 +43,14 @@ Set these secrets for the Supabase function:
 ```bash
 supabase secrets set OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
 supabase secrets set OPENAI_MODEL="gpt-4.1-mini"
+supabase secrets set OPENAI_EVALUATOR_MODEL="gpt-4.1-mini"
+supabase secrets set AUTOMATED_APPROVAL_ENABLED="false"
 supabase secrets set ALLOWED_ORIGIN="http://127.0.0.1:8788"
 ```
+
+The deployed alpha also accepts the existing custom secret name
+`Home_search_oai_key`. `OPENAI_API_KEY` remains the preferred portable name for
+new environments.
 
 For production, set `ALLOWED_ORIGIN` to:
 
@@ -58,9 +72,15 @@ Then set the app config:
 window.HOME_SEARCH_AI_EVALUATION_ENDPOINT = "https://YOUR_PROJECT.supabase.co/functions/v1/evaluate-home";
 ```
 
+Set `AUTOMATED_APPROVAL_ENABLED=true` only after the deployed source adapters,
+golden suite, database migration, and environment-specific end-to-end checks
+pass. The service-role key is used only inside the Edge Function so browsers
+cannot insert or modify approval records.
+
 ## Current Behavior
 
-The backend evaluation is intentionally a screening read. It does not browse live sources yet. It uses:
+The backend evaluation remains an evidence-limited screening candidate until
+live source adapters are connected. It uses:
 
 - Buyer workspace fields
 - Buyer Search Brief
@@ -68,7 +88,7 @@ The backend evaluation is intentionally a screening read. It does not browse liv
 - Pasted listing notes
 - The `skills/home-evaluation` rubric
 
-It returns:
+It generates:
 
 - Decision read
 - Negotiation posture
@@ -77,6 +97,19 @@ It returns:
 - Main risks or unknowns
 - Evidence limits
 - 12 rubric sections for property snapshot, schools, safety, value/comps, negotiation, condition, title/legal, financial fit, lifestyle fit, physical-site risk, and open questions
+
+The automated approval layer additionally records:
+
+- The immutable candidate hash.
+- Every deterministic gate result.
+- The independent evaluator result bound to the same hash.
+- A versioned approval manifest and safe reason codes.
+
+The property-identity adapter reconciles the submitted address against King
+County's current ArcGIS Online parcel/address layer. Zero, multiple, incomplete,
+or mismatched results fail closed. Automatic delivery still defaults off until
+the migration, deployment, source-rights check, and deployed end-to-end
+rehearsal pass.
 
 ## Next Backend Step
 

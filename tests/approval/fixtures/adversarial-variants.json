@@ -1,0 +1,133 @@
+[
+  {
+    "id": "unresolved-identity",
+    "description": "Parcel/unit ambiguity must block release.",
+    "patch": {
+      "subject.identityResolved": false
+    }
+  },
+  {
+    "id": "unsupported-critical-claim",
+    "description": "A critical fact without a source must block release.",
+    "patch": {
+      "claims[0].sourceIds": []
+    }
+  },
+  {
+    "id": "missing-buyer-question",
+    "description": "Dropping an intake question must block release.",
+    "patch": {
+      "buyer.questions": []
+    }
+  },
+  {
+    "id": "comp-weight-drift",
+    "description": "Comparable weights that do not total one must block release.",
+    "patch": {
+      "comparables.records[0].weight": 0.32
+    }
+  },
+  {
+    "id": "price-per-square-foot-error",
+    "description": "Displayed $/sf inconsistent with price and area must block.",
+    "patch": {
+      "comparables.records[1].pricePerFinishedSf": 999
+    }
+  },
+  {
+    "id": "broken-document-page",
+    "description": "A material document claim with an invalid page must block.",
+    "patch": {
+      "claims[2].documentLocator.pageExists": false
+    }
+  },
+  {
+    "id": "professional-overreach",
+    "description": "Claiming inspection certainty must block release.",
+    "patch": {
+      "recommendation.professionalBoundaries": []
+    }
+  },
+  {
+    "id": "cross-user-data",
+    "description": "Any cross-user data detection must block release.",
+    "patch": {
+      "privacy.crossUserDataDetected": true
+    }
+  },
+  {
+    "id": "private-share-field",
+    "description": "An unauthorized negotiation ceiling in a share must block.",
+    "patch": {
+      "privacy.privateFieldsInShare": [
+        "negotiation.walkAwayPrice"
+      ]
+    }
+  },
+  {
+    "id": "prompt-injection-executed",
+    "description": "Execution of untrusted document instructions must block.",
+    "patch": {
+      "security.promptInjectionDetected": true,
+      "security.untrustedInstructionsExecuted": true
+    }
+  },
+  {
+    "id": "stale-numeric-guidance",
+    "description": "Offer-stage status older than 24 hours must block numeric guidance.",
+    "patch": {
+      "subject.statusCheckedAt": "2026-07-27T12:00:00Z"
+    }
+  },
+  {
+    "id": "insufficient-offer-comps",
+    "description": "Numeric offer guidance with fewer than five eligible comps must block.",
+    "patch": {
+      "comparables.records": [
+        {
+          "$copy": "comparables.records[0]"
+        },
+        {
+          "$copy": "comparables.records[1]"
+        },
+        {
+          "$copy": "comparables.records[2]"
+        }
+      ]
+    }
+  },
+  {
+    "id": "fixed-offset-scenarios",
+    "description": "Scenarios not recalculated from explicit inputs must block.",
+    "patch": {
+      "comparables.scenarios.low.recalculated": false
+    }
+  },
+  {
+    "id": "evaluator-exception",
+    "description": "An evaluator exception must fail closed.",
+    "patch": {
+      "evaluator.result": "exception",
+      "evaluator.defects": [
+        {
+          "code": "UNSUPPORTED_SYNTHESIS",
+          "claimId": "claim-value"
+        }
+      ]
+    }
+  },
+  {
+    "id": "evaluator-hash-mismatch",
+    "description": "An evaluator result for another candidate must block.",
+    "patch": {
+      "evaluator.candidateHash": "sha256:different-candidate"
+    }
+  },
+  {
+    "id": "render-version-mismatch",
+    "description": "A render from another analysis version must block.",
+    "patch": {
+      "render.analysisVersion": "analysis/other"
+    }
+  }
+]

@@ -1,0 +1,70 @@
+{
+  "canonical-candidate": {
+    "release": true,
+    "failureCodes": []
+  },
+  "unresolved-identity": {
+    "release": false,
+    "failureCodes": ["IDENTITY_UNRESOLVED"]
+  },
+  "unsupported-critical-claim": {
+    "release": false,
+    "failureCodes": ["CRITICAL_CLAIM_UNSOURCED"]
+  },
+  "missing-buyer-question": {
+    "release": false,
+    "failureCodes": ["BUYER_QUESTIONS_MISSING"]
+  },
+  "comp-weight-drift": {
+    "release": false,
+    "failureCodes": ["COMP_WEIGHTS_INVALID", "WEIGHTED_VALUE_MISMATCH"]
+  },
+  "price-per-square-foot-error": {
+    "release": false,
+    "failureCodes": ["COMP_PRICE_PER_SF_MISMATCH"]
+  },
+  "broken-document-page": {
+    "release": false,
+    "failureCodes": ["DOCUMENT_PAGE_INVALID"]
+  },
+  "professional-overreach": {
+    "release": false,
+    "failureCodes": ["PROFESSIONAL_BOUNDARY_MISSING"]
+  },
+  "cross-user-data": {
+    "release": false,
+    "failureCodes": ["CROSS_USER_DATA"]
+  },
+  "private-share-field": {
+    "release": false,
+    "failureCodes": ["PRIVATE_FIELD_IN_SHARE"]
+  },
+  "prompt-injection-executed": {
+    "release": false,
+    "failureCodes": ["PROMPT_INJECTION_INTEGRITY"]
+  },
+  "stale-numeric-guidance": {
+    "release": false,
+    "failureCodes": ["NUMERIC_GUIDANCE_STATUS_STALE"]
+  },
+  "insufficient-offer-comps": {
+    "release": false,
+    "failureCodes": ["NUMERIC_GUIDANCE_COMPS_INSUFFICIENT", "COMP_WEIGHTS_INVALID", "WEIGHTED_VALUE_MISMATCH"]
+  },
+  "fixed-offset-scenarios": {
+    "release": false,
+    "failureCodes": ["SCENARIO_NOT_RECALCULATED"]
+  },
+  "evaluator-exception": {
+    "release": false,
+    "failureCodes": ["EVALUATOR_NOT_PASS"]
+  },
+  "evaluator-hash-mismatch": {
+    "release": false,
+    "failureCodes": ["EVALUATOR_HASH_MISMATCH"]
+  },
+  "render-version-mismatch": {
+    "release": false,
+    "failureCodes": ["RENDER_VERSION_MISMATCH"]
+  }
+}
