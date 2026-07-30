@@ -35,7 +35,8 @@ Use this checklist for every home evaluation. Keep the final brief decision-read
 ### Property Value And Comps
 
 - Compare list price against nearby recent sales with similar square footage, beds/baths, age, lot, condition, view, school assignment, and renovation level.
-- Calculate price per square foot and compare to relevant comps.
+- **P0 requirement:** every comparable-sales table must include the subject property and a visible price-per-finished-square-foot column for the subject and every comp. Calculate it from the price and finished area shown in the same analysis; do not leave it implicit or only in a separate workbook.
+- Treat price per square foot as a required cross-check, not the primary valuation method. Explain material differences in lot, condition, layout, view, garage, age, and renovation quality that make raw $/sf comparisons imperfect.
 - Watch for mix issues: new construction vs older homes, basement ADU/in-law setup, large lots, steep/slope lots, odd layouts.
 - State whether list price appears low, fair, stretched, or unsupported.
 

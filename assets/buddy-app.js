@@ -1,5 +1,8 @@
 (function () {
   var STORAGE_KEY = "homeFindingBuddyMvp.v1";
+  var UI_STATE_KEY = "homeFindingBuddyMvp.ui.v1";
+  var FUNNEL_KEY = "homeFindingBuddyMvp.funnel.v1";
+  var PENDING_ANALYSIS_KEY = "homeFindingBuddyMvp.pendingAnalysis.v1";
 
   var defaultState = {
     workspace: {
@@ -26,23 +29,218 @@
     loading: false
   };
   var syncTimer = null;
+  var requestStatusTimer = null;
   var recognition = null;
   var activeVoiceTarget = null;
+  var uiState = loadUiState();
+  var funnelSessionId = createId("session");
+
+  function createId(prefix) {
+    return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 9);
+  }
+
+  function loadUiState() {
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(UI_STATE_KEY) || "null");
+      var ui = Object.assign({
+        activeView: "",
+        requestStep: 1,
+        activeListingId: null,
+        pendingAnalysisListingId: null
+      }, saved || {});
+      ui.pendingAnalysisListingId = ui.pendingAnalysisListingId || localStorage.getItem(PENDING_ANALYSIS_KEY) || null;
+      return ui;
+    } catch (error) {
+      return {
+        activeView: "",
+        requestStep: 1,
+        activeListingId: null,
+        pendingAnalysisListingId: null
+      };
+    }
+  }
+
+  function saveUiState() {
+    try {
+      sessionStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
+      if (uiState.pendingAnalysisListingId) {
+        localStorage.setItem(PENDING_ANALYSIS_KEY, uiState.pendingAnalysisListingId);
+      } else {
+        localStorage.removeItem(PENDING_ANALYSIS_KEY);
+      }
+    } catch (error) {
+      // The product remains usable when private browsing blocks session storage.
+    }
+  }
+
+  function trackFunnel(name, properties) {
+    var event = {
+      id: createId("event"),
+      name: name,
+      at: new Date().toISOString(),
+      sessionId: funnelSessionId,
+      properties: properties || {},
+      synced: false
+    };
+    try {
+      var events = JSON.parse(localStorage.getItem(FUNNEL_KEY) || "[]");
+      if (!Array.isArray(events)) events = [];
+      events.push(event);
+      localStorage.setItem(FUNNEL_KEY, JSON.stringify(events.slice(-100)));
+    } catch (error) {
+      // Analytics must never block a buyer task.
+    }
+    window.dispatchEvent(new CustomEvent("home-finding-buddy:funnel", {
+      detail: event
+    }));
+    if (remote.client && remote.user) flushFunnelEvents();
+  }
+
+  async function flushFunnelEvents() {
+    if (!remote.client || !remote.user) return;
+    try {
+      var events = JSON.parse(localStorage.getItem(FUNNEL_KEY) || "[]");
+      if (!Array.isArray(events)) return;
+      var unsynced = events.filter(function (event) { return !event.synced; }).slice(0, 50);
+      if (!unsynced.length) return;
+      var rows = unsynced.map(function (event) {
+        return {
+          client_event_id: event.id || createId("legacy-event"),
+          owner_id: remote.user.id,
+          anonymous_session_id: event.sessionId || "unknown",
+          request_id: event.properties && event.properties.requestId ? event.properties.requestId : null,
+          event_name: event.name,
+          properties: event.properties || {},
+          occurred_at: event.at
+        };
+      });
+      var response = await remote.client
+        .from("home_buddy_product_events")
+        .upsert(rows, { onConflict: "client_event_id", ignoreDuplicates: true });
+      if (response.error) return;
+      var syncedIds = new Set(unsynced.map(function (event) { return event.id; }));
+      events.forEach(function (event) {
+        if (syncedIds.has(event.id)) event.synced = true;
+      });
+      localStorage.setItem(FUNNEL_KEY, JSON.stringify(events.slice(-100)));
+    } catch (error) {
+      // Central analytics are best-effort and never block the buyer flow.
+    }
+  }
+
+  function setActiveView(name, options) {
+    if (!name) return;
+    var views = document.querySelectorAll("[data-view]");
+    var hasTargetView = Array.from(views).some(function (view) {
+      return view.getAttribute("data-view") === name;
+    });
+    if (views.length && !hasTargetView) {
+      var fallbackTarget = document.getElementById(name);
+      if (fallbackTarget) fallbackTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    uiState.activeView = name;
+    saveUiState();
+
+    if (views.length) {
+      views.forEach(function (view) {
+        var active = view.getAttribute("data-view") === name;
+        view.hidden = !active;
+        view.setAttribute("aria-hidden", active ? "false" : "true");
+      });
+    }
+
+    document.querySelectorAll("[data-view-target], [data-nav-view]").forEach(function (control) {
+      var target = control.getAttribute("data-view-target") || control.getAttribute("data-nav-view");
+      var active = target === name;
+      control.setAttribute("aria-current", active ? "page" : "false");
+      control.dataset.active = active ? "true" : "false";
+    });
+
+    if (!options || options.track !== false) trackFunnel("view_opened", { view: name });
+    if (name === "results" && getActiveListing()) {
+      trackFunnel("report_opened", {
+        hasApprovedBrief: Boolean(getActiveListing().aiEvaluation)
+      });
+    }
+    if (options && options.focus) {
+      var activeView = document.querySelector('[data-view="' + name + '"]');
+      var heading = activeView && activeView.querySelector("h1, h2, [data-view-heading]");
+      if (heading) {
+        heading.setAttribute("tabindex", "-1");
+        heading.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  function setRequestStep(step, options) {
+    var steps = Array.from(document.querySelectorAll("[data-request-step]"));
+    var maxStep = steps.reduce(function (maximum, node) {
+      return Math.max(maximum, Number(node.getAttribute("data-request-step")) || 1);
+    }, 1);
+    uiState.requestStep = Math.min(Math.max(Number(step) || 1, 1), maxStep);
+    saveUiState();
+
+    steps.forEach(function (node) {
+      var active = Number(node.getAttribute("data-request-step")) === uiState.requestStep;
+      node.hidden = !active;
+      node.setAttribute("aria-hidden", active ? "false" : "true");
+    });
+    document.querySelectorAll("[data-request-progress]").forEach(function (node) {
+      node.textContent = "Step " + uiState.requestStep + " of " + maxStep;
+      if (node.parentElement) {
+        node.parentElement.style.setProperty("--request-progress", String((uiState.requestStep / maxStep) * 100) + "%");
+        node.parentElement.setAttribute("aria-valuenow", String(uiState.requestStep));
+      }
+    });
+    if (!options || options.track !== false) {
+      trackFunnel("request_step_viewed", { step: uiState.requestStep, totalSteps: maxStep });
+      if (uiState.requestStep === maxStep) {
+        trackFunnel("request_reviewed", {
+          depthDefault: "decision-brief",
+          signedIn: Boolean(remote.user)
+        });
+      }
+    }
+  }
 
   function loadState() {
     try {
       var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      return saved ? Object.assign({}, defaultState, saved) : structuredClone(defaultState);
+      return saved ? sanitizeLoadedState(Object.assign({}, defaultState, saved)) : structuredClone(defaultState);
     } catch (error) {
       return structuredClone(defaultState);
     }
   }
 
+  function sanitizeLoadedState(loadedState) {
+    var sanitized = structuredClone(loadedState || defaultState);
+    if (!Array.isArray(sanitized.listings)) sanitized.listings = [];
+    sanitized.listings.forEach(function (listing) {
+      listing.aiEvaluation = null;
+      listing.aiCandidate = null;
+      listing.approvalDecision = null;
+      listing.aiModel = "";
+    });
+    return sanitized;
+  }
+
   function saveState(options) {
     state.updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithoutReleasedPayloads()));
     render();
     if (!options || options.sync !== false) scheduleRemoteSync();
+  }
+
+  function stateWithoutReleasedPayloads() {
+    var safeState = structuredClone(state);
+    safeState.listings.forEach(function (listing) {
+      listing.aiEvaluation = null;
+      listing.aiCandidate = null;
+      listing.approvalDecision = null;
+      listing.aiModel = "";
+    });
+    return safeState;
   }
 
   function escapeHtml(value) {
@@ -151,8 +349,24 @@
     remote.client.auth.onAuthStateChange(async function (_event, session) {
       remote.user = session && session.user ? session.user : null;
       if (remote.user) {
+        if (_event === "SIGNED_IN") trackFunnel("auth_completed", { method: "magic_link" });
         await loadRemoteWorkspace();
+        await refreshRequestStatuses();
+        flushFunnelEvents();
+        if (!requestStatusTimer) {
+          requestStatusTimer = window.setInterval(refreshRequestStatuses, 30000);
+        }
+        if (uiState.pendingAnalysisListingId) {
+          var pendingListingId = uiState.pendingAnalysisListingId;
+          uiState.pendingAnalysisListingId = null;
+          saveUiState();
+          requestAiEvaluation(pendingListingId);
+        }
       } else {
+        if (requestStatusTimer) {
+          window.clearInterval(requestStatusTimer);
+          requestStatusTimer = null;
+        }
         var justSignedOut = remote.status === "Signing out" || remote.status === "Signed out";
         remote.workspaceId = null;
         setRemoteStatus(justSignedOut ? "Signed out" : "Not signed in");
@@ -181,6 +395,7 @@
       return;
     }
     setRemoteStatus("Sending magic link");
+    trackFunnel("auth_started", { method: "magic_link" });
     var result = await remote.client.auth.signInWithOtp({
       email: email,
       options: {
@@ -188,10 +403,13 @@
       }
     });
     if (result.error) {
+      trackFunnel("auth_link_requested", { success: false });
       setRemoteStatus("Magic link failed: " + result.error.message);
       return;
     }
     setRemoteStatus("Magic link sent");
+    trackFunnel("auth_link_requested", { success: true });
+    trackFunnel("auth_link_sent", { method: "magic_link" });
   }
 
   async function signOut() {
@@ -203,6 +421,13 @@
       setRemoteStatus("Sign out failed: " + result.error.message);
       return;
     }
+    state.listings.forEach(function (listing) {
+      listing.aiEvaluation = null;
+      listing.aiCandidate = null;
+      listing.approvalDecision = null;
+      listing.aiModel = "";
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithoutReleasedPayloads()));
     remote.user = null;
     remote.workspaceId = null;
     setRemoteStatus("Signed out");
@@ -243,8 +468,8 @@
     if (response.data) remote.workspaceId = response.data.id;
 
     if (remoteHasData && shouldPreferRemote(remoteState, response.data.updated_at)) {
-      state = Object.assign({}, structuredClone(defaultState), remoteState);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      state = sanitizeLoadedState(Object.assign({}, structuredClone(defaultState), remoteState));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithoutReleasedPayloads()));
       remote.loading = false;
       setRemoteStatus("Synced from cloud");
       render();
@@ -278,10 +503,11 @@
     var title = state.workspace.householdName || "Home Search";
     setRemoteStatus("Syncing");
 
+    var cloudState = stateWithoutReleasedPayloads();
     var payload = {
       owner_id: remote.user.id,
       title: title,
-      app_state: state
+      app_state: cloudState
     };
 
     var response;
@@ -326,10 +552,20 @@
     if (!remote.client || !remote.user) {
       listing.aiStatus = "Sign in before running server AI.";
       saveState();
+      setActiveView("account");
       return;
     }
 
     listing.aiStatus = "Running server AI evaluation";
+    uiState.pendingAnalysisListingId = null;
+    uiState.activeListingId = listing.id;
+    saveUiState();
+    setActiveView("processing");
+    trackFunnel("request_started", {
+      decisionStage: listing.decisionStage || "considering-tour",
+      depth: listing.analysisDepth || "decision-brief",
+      documentCount: 0
+    });
     saveState();
 
     try {
@@ -363,6 +599,9 @@
       }
       listing.aiCandidate = data.evaluation || null;
       listing.aiEvaluationId = data.evaluationId || null;
+      listing.aiRequestId = data.requestId || listing.aiRequestId || null;
+      listing.requestStatus = data.requestStatus || null;
+      listing.safeStatusMessage = data.safeStatusMessage || "";
       listing.aiModel = data.model || "";
       listing.approvalDecision = data.approvalDecision || null;
       if (listing.approvalDecision && listing.approvalDecision.outcome === "auto_approved") {
@@ -372,11 +611,67 @@
         listing.aiEvaluation = null;
         listing.aiStatus = approvalStatusCopy(listing.approvalDecision);
       }
+      trackFunnel("report_ready", {
+        requestId: listing.aiRequestId,
+        evidenceStatus: listing.approvalDecision && listing.approvalDecision.outcome
+          ? listing.approvalDecision.outcome
+          : "missing_decision",
+        depth: listing.analysisDepth || "decision-brief"
+      });
       saveState();
+      setActiveView("results", { focus: true });
     } catch (error) {
       listing.aiStatus = "AI failed: " + (error && error.message ? error.message : "Unknown error");
+      trackFunnel("analysis_failed", { retryable: true });
       saveState();
+      setActiveView("results", { focus: true });
     }
+  }
+
+  async function refreshRequestStatuses() {
+    if (!remote.client || !remote.user) return;
+    var requestIds = state.listings
+      .map(function (listing) { return listing.aiRequestId; })
+      .filter(Boolean);
+    if (!requestIds.length) return;
+
+    var requestResponse = await remote.client
+      .from("home_buddy_evaluation_requests")
+      .select("id,status,safe_status_message,released_at,updated_at")
+      .in("id", requestIds);
+    if (requestResponse.error) return;
+
+    var releasedResponse = await remote.client
+      .from("home_buddy_released_results")
+      .select("request_id,result_payload,approval_manifest,released_at,version")
+      .in("request_id", requestIds)
+      .is("withdrawn_at", null)
+      .order("version", { ascending: false });
+    var releasedRows = releasedResponse.error ? [] : (releasedResponse.data || []);
+
+    (requestResponse.data || []).forEach(function (requestRow) {
+      var listing = state.listings.find(function (item) {
+        return item.aiRequestId === requestRow.id;
+      });
+      if (!listing) return;
+      listing.requestStatus = requestRow.status;
+      listing.safeStatusMessage = requestRow.safe_status_message;
+      var released = releasedRows.find(function (row) {
+        return row.request_id === requestRow.id;
+      });
+      if (released) {
+        listing.aiEvaluation = released.result_payload;
+        listing.approvalDecision = released.approval_manifest;
+        listing.aiStatus = "Reviewed decision packet ready";
+      } else {
+        listing.aiEvaluation = null;
+        listing.approvalDecision = null;
+        if (requestRow.status === "withdrawn") {
+          listing.aiStatus = "This reviewed report is no longer available.";
+        }
+      }
+    });
+    saveState();
   }
 
   function approvalStatusCopy(decision) {
@@ -533,9 +828,23 @@
     };
     listing.review = buildListingReview(listing);
     state.listings.unshift(listing);
+    uiState.activeListingId = listing.id;
+    saveUiState();
+    trackFunnel("listing_submitted", {
+      sourceCategory: includesAny(listing.url, ["redfin"]) ? "redfin" : (listing.url ? "other_url" : "address"),
+      inputType: listing.url ? "url" : "address"
+    });
+    trackFunnel("listing_validated", {
+      sourceCategory: includesAny(listing.url, ["redfin"]) ? "redfin" : (listing.url ? "other_url" : "address"),
+      hasUrl: Boolean(listing.url),
+      completeness: listing.address && listing.price ? "complete" : "partial"
+    });
     saveState();
     form.reset();
-    document.querySelector("#listings").scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveView("results");
+    var listingSection = document.querySelector("#listings");
+    if (listingSection) listingSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    return listing;
   }
 
   function buildListingReview(listing) {
@@ -978,6 +1287,128 @@
     renderSuggestions();
     renderListings();
     renderDebriefOptions();
+    renderGuidedExperience();
+  }
+
+  function getActiveListing() {
+    var active = state.listings.find(function (item) {
+      return item.id === uiState.activeListingId;
+    });
+    return active || state.listings[0] || null;
+  }
+
+  function getAnalysisPresentation(listing) {
+    if (!listing) {
+      return {
+        stage: "ready",
+        title: "Ready for your first home",
+        detail: "Paste a listing to start a private decision review.",
+        progress: 0
+      };
+    }
+    if (listing.requestStatus === "in_review") {
+      return {
+        stage: "review",
+        title: "Reviewing the evidence",
+        detail: listing.safeStatusMessage || "The analysis is complete and we’re checking the evidence before sharing it.",
+        progress: 82
+      };
+    }
+    if (listing.requestStatus === "needs_buyer_input") {
+      return {
+        stage: "needs_input",
+        title: "One detail would strengthen your report",
+        detail: listing.safeStatusMessage || "We need more information before we can responsibly finish the report.",
+        progress: 72
+      };
+    }
+    if (listing.requestStatus === "ready" && listing.aiEvaluation) {
+      return {
+        stage: "complete",
+        title: "Your reviewed decision packet is ready",
+        detail: "Open the result to review the evidence, unknowns, and next actions.",
+        progress: 100
+      };
+    }
+    if (listing.requestStatus === "failed") {
+      return {
+        stage: "failed",
+        title: "We couldn’t finish this report",
+        detail: listing.safeStatusMessage || "Your request is saved while we review what went wrong.",
+        progress: 100
+      };
+    }
+    if (listing.approvalDecision) {
+      var outcome = listing.approvalDecision.outcome;
+      if (outcome === "auto_approved") {
+        return {
+          stage: "complete",
+          title: "Your Decision Brief is ready",
+          detail: "Required automated checks passed. Review the evidence and remaining limits.",
+          progress: 100
+        };
+      }
+      return {
+        stage: "exception",
+        title: outcome === "insufficient_evidence" ? "More evidence is needed" : "This brief needs review",
+        detail: approvalStatusCopy(listing.approvalDecision),
+        progress: 100
+      };
+    }
+    if (includesAny(listing.aiStatus, ["running", "checking", "building", "validating"])) {
+      return {
+        stage: "processing",
+        title: "We’re checking the property",
+        detail: "We’re organizing the available evidence and validating the decision brief.",
+        progress: 58
+      };
+    }
+    if (includesAny(listing.aiStatus, ["failed", "interrupted"])) {
+      return {
+        stage: "failed",
+        title: "The analysis was interrupted",
+        detail: "Your local screening read is safe. You can try the private analysis again.",
+        progress: 100
+      };
+    }
+    return {
+      stage: "local",
+      title: "Your local screening read is ready",
+      detail: isAiReady()
+        ? "Create an evidence-checked brief when you want the deeper private analysis."
+        : "Sign in to create a private, evidence-checked brief.",
+      progress: 25
+    };
+  }
+
+  function renderGuidedExperience() {
+    var listing = getActiveListing();
+    var presentation = getAnalysisPresentation(listing);
+    document.querySelectorAll("[data-returning-home]").forEach(function (node) {
+      node.hidden = !state.listings.length;
+    });
+    document.querySelectorAll("[data-active-listing-title]").forEach(function (node) {
+      node.textContent = listing ? (listing.address || listing.url || "Your home") : "Your home";
+    });
+    document.querySelectorAll("[data-analysis-status], [data-processing-status]").forEach(function (node) {
+      node.textContent = presentation.title;
+      node.dataset.state = presentation.stage;
+    });
+    document.querySelectorAll("[data-analysis-status-detail], [data-processing-detail]").forEach(function (node) {
+      node.textContent = presentation.detail;
+    });
+    document.querySelectorAll("[data-analysis-progress], [data-processing-progress]").forEach(function (node) {
+      node.style.width = presentation.progress + "%";
+      node.setAttribute("aria-valuenow", String(presentation.progress));
+    });
+    document.querySelectorAll("[data-analysis-stage]").forEach(function (node) {
+      var stage = node.getAttribute("data-analysis-stage");
+      var stageOrder = ["ready", "local", "processing", "complete"];
+      var current = stageOrder.indexOf(presentation.stage);
+      var position = stageOrder.indexOf(stage);
+      var done = current !== -1 && position !== -1 && position <= current;
+      node.dataset.state = done ? "done" : (stage === presentation.stage ? "active" : "upcoming");
+    });
   }
 
   function renderAuth() {
@@ -1200,9 +1631,11 @@
     var target = document.querySelector("[data-listing-stack]");
     if (!state.listings.length) {
       target.innerHTML = [
-        '<div class="empty-state action-empty">',
-        "<strong>No listings reviewed yet.</strong>",
-        "<p>Paste the next promising home above and the review will appear here.</p>",
+        '<div class="polished-empty">',
+        '<span aria-hidden="true">⌂</span>',
+        "<h2>No homes yet</h2>",
+        "<p>Add a home to create your first buyer-specific decision packet.</p>",
+        '<button class="button coral" type="button" data-view-target="request">Analyze a home</button>',
         "</div>"
       ].join("");
       return;
@@ -1211,27 +1644,75 @@
       var review = listing.review || buildListingReview(listing);
       if (!review.skillEvaluation) review.skillEvaluation = buildSkillEvaluation(listing, review);
       var skillEvaluation = review.skillEvaluation;
+      var hasEvidenceResult = Boolean(listing.aiEvaluation);
+      var releasedCandidate = hasEvidenceResult ? listing.aiEvaluation : null;
+      var decisionIntro = hasEvidenceResult
+        ? '<div class="decision-summary"><p class="decision-summary-copy">' + escapeHtml(releasedCandidate.decisionRead || "Reviewed decision packet") + '</p></div>'
+        : [
+          '<div class="request-saved-summary">',
+          "<strong>Your request is saved.</strong>",
+          "<p>We’ve organized the questions that matter. Run the private evidence check before treating this as a recommendation.</p>",
+          "</div>"
+        ].join("");
+      var preliminaryQuestions = hasEvidenceResult ? [
+        '<div class="decision-priority-grid">',
+        priorityList("Buyer fit", [candidateSection(releasedCandidate, "buyer_fit")], "strength"),
+        priorityList("Risks and unknowns", [candidateSection(releasedCandidate, "risks_unknowns")], "risk"),
+        priorityList("What to do next", [candidateSection(releasedCandidate, "questions_actions")], "action"),
+        "</div>"
+      ].join("") : [
+        '<div class="decision-priority-grid preliminary-grid">',
+        priorityList("Questions to test", review.concerns, "risk"),
+        priorityList("Evidence to gather", review.diligence, "action"),
+        "</div>"
+      ].join("");
       return [
-        '<article class="listing-card">',
+        '<article class="listing-card decision-card">',
         '<div class="listing-card-head">',
         "<div>",
+        '<span class="decision-card-label">' + (hasEvidenceResult ? "Evidence-checked decision packet" : "Request saved · Evidence check pending") + "</span>",
         "<h3>" + escapeHtml(listing.address || listing.url || "Untitled listing") + "</h3>",
         '<p class="muted-line">' + escapeHtml([listing.price, dateLabel(listing.createdAt)].filter(Boolean).join(" · ")) + "</p>",
         "</div>",
-        '<span class="score-pill">' + escapeHtml(review.recommendation) + " · " + escapeHtml(review.score) + "</span>",
+        hasEvidenceResult ? '<span class="score-pill">Reviewed</span>' : "",
         "</div>",
-        "<p>" + escapeHtml(review.summary) + "</p>",
+        decisionIntro,
+        preliminaryQuestions,
         renderAiEvaluationAction(listing),
-        renderApprovalDecision(listing),
+        hasEvidenceResult ? renderApprovalDecision(listing) : "",
         listing.aiEvaluation ? renderApprovedEvaluation(listing.aiEvaluation) : "",
-        renderSkillEvaluation(skillEvaluation),
-        reviewList("Fit signals", review.matches),
-        reviewList("Immediate concerns", review.concerns),
-        reviewList("First diligence moves", review.diligence),
+        hasEvidenceResult ? "" : [
+          '<details class="report-details">',
+          "<summary>See the preliminary question map</summary>",
+          renderSkillEvaluation(skillEvaluation),
+          "</details>"
+        ].join(""),
+        '<div class="decision-actions">',
+        '<button class="button secondary" type="button" data-view-target="debrief" data-debrief-listing-id="' + escapeHtml(listing.id) + '">I toured this home</button>',
+        '<button class="button secondary" type="button" data-view-target="request">Compare another home</button>',
+        "</div>",
         listing.debriefs.length ? reviewList("Latest debrief", [listing.debriefs[0].summary, listing.debriefs[0].nextStep]) : "",
         "</article>"
       ].join("");
     }).join("");
+  }
+
+  function priorityList(title, items, kind) {
+    var list = (items || []).slice(0, 3).map(function (item) {
+      return "<li>" + escapeHtml(item) + "</li>";
+    }).join("");
+    return [
+      '<section class="decision-priority" data-kind="' + escapeHtml(kind) + '">',
+      "<strong>" + escapeHtml(title) + "</strong>",
+      "<ul>" + (list || "<li>No signal yet.</li>") + "</ul>",
+      "</section>"
+    ].join("");
+  }
+
+  function candidateSection(candidate, id) {
+    var sections = candidate && Array.isArray(candidate.sections) ? candidate.sections : [];
+    var section = sections.find(function (item) { return item.id === id; });
+    return section && section.content ? section.content : "No released finding in this section.";
   }
 
   function reviewList(title, items) {
@@ -1244,15 +1725,28 @@
     var endpoint = getAiConfig().endpoint;
     var ready = isAiReady();
     var hasAi = Boolean(listing.approvalDecision);
-    var disabled = ready ? "" : " disabled";
-    var buttonLabel = hasAi ? "Refresh evidence-checked brief" : "Build evidence-checked brief";
+    var buttonLabel = hasAi ? "Refresh evidence check" : "Run the deeper evidence check";
     var hint = !endpoint
-      ? "Set HOME_SEARCH_AI_EVALUATION_ENDPOINT after deploying the Supabase Edge Function."
-      : (!remote.user ? "Sign in to run a private evidence-checked analysis." : "The result is released only when every critical automated gate passes.");
+      ? "The deeper private analysis is temporarily unavailable."
+      : (!remote.user ? "Sign in to save this home and begin the private analysis." : "We’ll clearly label what is verified, inferred, or still unknown.");
     if (listing.aiStatus) hint = listing.aiStatus;
+    var button;
+    if (listing.requestStatus === "in_review") {
+      button = '<span class="status-pill request-reviewing">Reviewing the evidence</span>';
+      hint = listing.safeStatusMessage || "We’ll make the reviewed report available here when it is ready.";
+    } else if (listing.requestStatus === "ready" && listing.aiEvaluation) {
+      button = '<span class="status-pill request-ready">Report ready</span>';
+      hint = "This is the reviewed version released for you.";
+    } else if (ready) {
+      button = '<button class="button coral" type="button" data-run-ai-evaluation="' + escapeHtml(listing.id) + '">' + escapeHtml(buttonLabel) + "</button>";
+    } else if (endpoint && !remote.user) {
+      button = '<button class="button coral" type="button" data-prepare-auth="' + escapeHtml(listing.id) + '" data-view-target="account">Sign in to continue</button>';
+    } else {
+      button = '<button class="button secondary" type="button" disabled>' + escapeHtml(buttonLabel) + "</button>";
+    }
     return [
       '<div class="ai-action">',
-      '<button class="button secondary" type="button" data-run-ai-evaluation="' + escapeHtml(listing.id) + '"' + disabled + ">" + escapeHtml(buttonLabel) + "</button>",
+      button,
       "<span>" + escapeHtml(hint) + "</span>",
       "</div>"
     ].join("");
@@ -1262,25 +1756,43 @@
     var decision = listing.approvalDecision;
     if (!decision) return "";
     var labels = {
-      auto_approved: "Automatically approved",
-      needs_review: "Quality exception",
-      insufficient_evidence: "Needs more evidence",
-      failed: "Validation failed"
+      auto_approved: "Evidence check complete",
+      needs_review: "Some evidence still needs review",
+      insufficient_evidence: "More evidence is needed",
+      failed: "We couldn’t finish the evidence check"
     };
     var reasons = Array.isArray(decision.reasonCodes) ? decision.reasonCodes : [];
     return [
       '<section class="approval-panel" data-outcome="' + escapeHtml(decision.outcome) + '">',
-      '<div><span>Evidence-checked Decision Brief</span><strong>' + escapeHtml(labels[decision.outcome] || "Not released") + "</strong></div>",
+      '<div><span>Evidence status</span><strong>' + escapeHtml(labels[decision.outcome] || "Not released") + "</strong></div>",
       "<p>" + escapeHtml(approvalStatusCopy(decision)) + "</p>",
-      reasons.length ? '<p class="approval-reasons">Recorded checks: ' + escapeHtml(reasons.join(", ")) + "</p>" : "",
+      reasons.length ? '<details class="approval-reasons"><summary>Why this status?</summary><p>' + escapeHtml(reasons.join(", ")) + "</p></details>" : "",
       decision.decidedAt ? "<small>Validated " + escapeHtml(dateLabel(decision.decidedAt)) + "</small>" : "",
       "</section>"
     ].join("");
   }
 
   function renderApprovedEvaluation(evaluation) {
+    if (evaluation && evaluation.schemaVersion === "decision-pack:v1") {
+      var sources = Array.isArray(evaluation.sources) ? evaluation.sources : [];
+      return [
+        '<div class="approved-divider"><span>Evidence-checked findings</span></div>',
+        '<section class="released-candidate" aria-label="Reviewed decision packet">',
+        '<div class="released-sections">',
+        (evaluation.sections || []).map(function (section) {
+          return '<article><h3>' + escapeHtml(String(section.id || "").replaceAll("_", " ")) + '</h3><p>' + escapeHtml(section.content) + "</p></article>";
+        }).join(""),
+        "</div>",
+        sources.length ? '<details class="released-sources"><summary>Sources and checked dates</summary><ul>' + sources.map(function (source) {
+          return '<li><a href="' + escapeHtml(source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(source.title) + "</a>" +
+            (source.retrievedAt ? " · checked " + escapeHtml(dateLabel(source.retrievedAt)) : "") + "</li>";
+        }).join("") + "</ul></details>" : "",
+        "<p class=\"evidence-boundary\">" + escapeHtml(evaluation.disclaimer) + "</p>",
+        "</section>"
+      ].join("");
+    }
     return [
-      '<div class="approved-divider"><span>Released Decision Brief</span></div>',
+      '<div class="approved-divider"><span>Evidence-checked findings</span></div>',
       renderSkillEvaluation(evaluation)
     ].join("");
   }
@@ -1288,9 +1800,9 @@
   function renderSkillEvaluation(evaluation) {
     if (!evaluation) return "";
     return [
-      '<section class="skill-evaluation" aria-label="Home Evaluation Skill read">',
+      '<section class="skill-evaluation" aria-label="Detailed home analysis">',
       '<div class="skill-header">',
-      '<span>' + escapeHtml(evaluation.skillName) + "</span>",
+      "<span>Detailed analysis</span>",
       '<strong>' + escapeHtml(evaluation.decisionRead) + "</strong>",
       "</div>",
       '<div class="skill-decision-grid">',
@@ -1395,6 +1907,25 @@
   }
 
   function bindEvents() {
+    var urlEntry = document.querySelector("[data-url-entry]");
+    if (urlEntry) {
+      urlEntry.addEventListener("submit", function (event) {
+        event.preventDefault();
+        var heroUrl = document.querySelector("#heroListingUrl");
+        var listingUrl = document.querySelector("#listingUrl");
+        if (!heroUrl || !listingUrl || !heroUrl.reportValidity()) return;
+        listingUrl.value = text(heroUrl.value);
+        trackFunnel("listing_url_entered", {
+          source: includesAny(heroUrl.value, ["redfin"]) ? "redfin" : "other"
+        });
+        setRequestStep(2, { track: false });
+        document.querySelectorAll("[data-request-summary-home]").forEach(function (node) {
+          node.textContent = text(heroUrl.value);
+        });
+        setActiveView("request", { focus: true });
+      });
+    }
+
     document.querySelector("[data-auth-form]").addEventListener("submit", function (event) {
       event.preventDefault();
       sendMagicLink(text(new FormData(event.currentTarget).get("email")));
@@ -1430,7 +1961,18 @@
 
     document.querySelector("[data-listing-form]").addEventListener("submit", function (event) {
       event.preventDefault();
-      reviewListing(event.currentTarget);
+      var listing = reviewListing(event.currentTarget);
+      var submitter = event.submitter;
+      if (submitter && submitter.hasAttribute("data-submit-analysis")) {
+        if (isAiReady()) {
+          requestAiEvaluation(listing.id);
+        } else {
+          uiState.pendingAnalysisListingId = listing.id;
+          saveUiState();
+          setActiveView("account");
+          trackFunnel("auth_gate_viewed", { source: "first_request" });
+        }
+      }
     });
 
     document.querySelector("[data-debrief-form]").addEventListener("submit", function (event) {
@@ -1454,6 +1996,34 @@
       });
     });
 
+    document.querySelectorAll("[data-question-prompt]").forEach(function (button) {
+      button.setAttribute("aria-pressed", "false");
+      button.addEventListener("click", function () {
+        var field = document.querySelector("#listingQuestions");
+        var prompt = button.getAttribute("data-question-prompt");
+        var selected = button.getAttribute("aria-pressed") === "true";
+        button.setAttribute("aria-pressed", selected ? "false" : "true");
+        if (selected && field) {
+          field.value = field.value
+            .split("\n")
+            .filter(function (line) { return line.indexOf(prompt + ":") !== 0; })
+            .join("\n")
+            .trim();
+        }
+        if (!selected && field && !includesAny(field.value, [prompt])) {
+          field.value = (field.value ? field.value.replace(/\s+$/, "") + "\n" : "") + prompt + ": ";
+          field.focus();
+        }
+      });
+    });
+
+    document.querySelectorAll('input[name="analysisDepthChoice"]').forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        var depth = document.querySelector("#analysisDepth");
+        if (depth && radio.checked) depth.value = radio.value;
+      });
+    });
+
     document.querySelectorAll("[data-voice-start]").forEach(function (button) {
       button.addEventListener("click", function () {
         startVoice(button.getAttribute("data-voice-start"));
@@ -1468,9 +2038,110 @@
       var accept = event.target.closest("[data-accept-suggestion]");
       var reject = event.target.closest("[data-reject-suggestion]");
       var aiButton = event.target.closest("[data-run-ai-evaluation]");
+      var viewButton = event.target.closest("[data-view-target], [data-nav-view]");
+      var prepareAuth = event.target.closest("[data-prepare-auth]");
+      var debriefButton = event.target.closest("[data-debrief-listing-id]");
+      var nextStep = event.target.closest("[data-request-next]");
+      var previousStep = event.target.closest("[data-request-back]");
       if (accept) acceptSuggestion(accept.getAttribute("data-accept-suggestion"));
       if (reject) rejectSuggestion(reject.getAttribute("data-reject-suggestion"));
       if (aiButton) requestAiEvaluation(aiButton.getAttribute("data-run-ai-evaluation"));
+      if (prepareAuth) {
+        uiState.pendingAnalysisListingId = prepareAuth.getAttribute("data-prepare-auth");
+        uiState.activeListingId = uiState.pendingAnalysisListingId;
+        saveUiState();
+      }
+      if (debriefButton) {
+        uiState.activeListingId = debriefButton.getAttribute("data-debrief-listing-id");
+        saveUiState();
+        var debriefSelect = document.querySelector("[data-debrief-listing]");
+        if (debriefSelect) debriefSelect.value = uiState.activeListingId;
+      }
+      if (viewButton) {
+        var view = viewButton.getAttribute("data-view-target") || viewButton.getAttribute("data-nav-view");
+        if (view === "request") {
+          var requestForm = document.querySelector("[data-listing-form]");
+          if (requestForm) requestForm.reset();
+          document.querySelectorAll("[data-question-prompt]").forEach(function (chip) {
+            chip.setAttribute("aria-pressed", "false");
+          });
+          setRequestStep(1, { track: false });
+        }
+        setActiveView(view, { focus: true });
+      }
+      if (nextStep) {
+        var currentPanel = nextStep.closest("[data-request-step]");
+        var fields = currentPanel ? currentPanel.querySelectorAll("input, textarea, select") : [];
+        var valid = Array.from(fields).every(function (field) {
+          return field.reportValidity();
+        });
+        if (valid) setRequestStep(uiState.requestStep + 1);
+      }
+      if (previousStep) {
+        if (uiState.requestStep <= 1) {
+          setActiveView("landing", { focus: true });
+        } else {
+          setRequestStep(uiState.requestStep - 1);
+        }
+      }
+    });
+
+    var listingUrl = document.querySelector("#listingUrl");
+    if (listingUrl) {
+      var updateDraftSummary = function () {
+        document.querySelectorAll("[data-request-summary-home]").forEach(function (node) {
+          node.textContent = text(listingUrl.value) || "Paste a listing to begin";
+        });
+      };
+      listingUrl.addEventListener("change", function () {
+        if (!text(listingUrl.value)) return;
+        updateDraftSummary();
+        trackFunnel("listing_url_entered", {
+          source: includesAny(listingUrl.value, ["redfin"]) ? "redfin" : "other"
+        });
+      });
+      listingUrl.addEventListener("input", updateDraftSummary);
+    }
+
+    var listingQuestions = document.querySelector("#listingQuestions");
+    if (listingQuestions) {
+      listingQuestions.addEventListener("input", function () {
+        var hasContext = Boolean(text(listingQuestions.value));
+        document.querySelectorAll("[data-request-summary-priorities]").forEach(function (node) {
+          node.textContent = hasContext
+            ? "Your priorities are included in this request."
+            : "We’ll tailor the research to your specific questions.";
+        });
+      });
+    }
+
+    window.addEventListener("hashchange", function () {
+      var hashView = window.location.hash.replace(/^#/, "");
+      if (document.querySelector('[data-view="' + hashView + '"]')) {
+        setActiveView(hashView, { track: false });
+      }
+    });
+  }
+
+  function initializeGuidedExperience() {
+    var views = document.querySelectorAll("[data-view]");
+    if (views.length) {
+      var hashView = window.location.hash.replace(/^#/, "");
+      var defaultView = document.querySelector('[data-view="' + hashView + '"]')
+        ? hashView
+        : (uiState.activeView || views[0].getAttribute("data-view"));
+      if (!document.querySelector('[data-view="' + defaultView + '"]')) {
+        defaultView = views[0].getAttribute("data-view");
+      }
+      setActiveView(defaultView, { track: false });
+    }
+    if (document.querySelector("[data-request-step]")) {
+      setRequestStep(uiState.requestStep, { track: false });
+    }
+    trackFunnel("landing_view", {
+      returning: Boolean(state.listings.length || state.brief || hasWorkspaceFrame()),
+      signedIn: Boolean(remote.user),
+      referrerCategory: document.referrer ? "external_or_internal" : "direct"
     });
   }
 
@@ -1483,6 +2154,7 @@
   setupVoice();
   bindEvents();
   render();
+  initializeGuidedExperience();
   setupSupabase().catch(function (error) {
     setRemoteStatus("Supabase setup failed: " + error.message);
   });

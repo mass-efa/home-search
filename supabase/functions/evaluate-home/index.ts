@@ -414,11 +414,72 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 
+  if (payload.workspaceId) {
+    const { data: ownedWorkspace, error: workspaceError } = await supabase
+      .from("home_buddy_workspaces")
+      .select("id")
+      .eq("id", payload.workspaceId)
+      .single();
+    if (workspaceError || !ownedWorkspace) {
+      return jsonResponse(request, { error: "Workspace not found" }, 404);
+    }
+  }
+
   const buyerContext = {
     workspace: payload.workspace || {},
     brief: payload.brief || null,
     conversationNotes: requireString(payload.conversationNotes)
   };
+
+  const { data: existingRequest } = await supabase
+    .from("home_buddy_evaluation_requests")
+    .select("id,status,safe_status_message")
+    .eq("listing_id", listing.id)
+    .maybeSingle();
+  if (existingRequest) {
+    return jsonResponse(request, {
+      requestId: existingRequest.id,
+      requestStatus: existingRequest.status,
+      safeStatusMessage: existingRequest.safe_status_message
+    });
+  }
+
+  const { data: requestRecord, error: requestError } = await admin
+    .from("home_buddy_evaluation_requests")
+    .insert({
+      owner_id: userData.user.id,
+      workspace_id: payload.workspaceId || null,
+      listing_id: listing.id,
+      listing_label: listing.address || listing.url || "Home evaluation",
+      decision_stage: payload.decisionStage || "considering-tour",
+      analysis_depth: payload.analysisDepth || "decision-brief",
+      status: "in_analysis",
+      safe_status_message: "We’re analyzing the home and organizing the evidence.",
+      idempotency_key: listing.id,
+      analysis_started_at: new Date().toISOString()
+    })
+    .select("id")
+    .single();
+
+  if (requestError || !requestRecord) {
+    const { data: racedRequest } = await admin
+      .from("home_buddy_evaluation_requests")
+      .select("id,status,safe_status_message")
+      .eq("owner_id", userData.user.id)
+      .eq("idempotency_key", listing.id)
+      .maybeSingle();
+    if (racedRequest) {
+      return jsonResponse(request, {
+        requestId: racedRequest.id,
+        requestStatus: racedRequest.status,
+        safeStatusMessage: racedRequest.safe_status_message
+      });
+    }
+    return jsonResponse(request, {
+      error: "Could not create the evaluation request"
+    }, 500);
+  }
+  const requestId = requestRecord.id;
 
   try {
     const checkedAt = new Date().toISOString();
@@ -493,14 +554,6 @@ Deno.serve(async (request) => {
         findingCodes: ["independent_evaluator_unavailable"]
       };
     }
-    if (Deno.env.get("AUTOMATED_APPROVAL_ENABLED") !== "true") {
-      independentEvaluator = {
-        evaluatorVersion: EVALUATOR_VERSION,
-        inputHash,
-        status: "blocking_findings",
-        findingCodes: ["automatic_approval_disabled"]
-      };
-    }
     const approvalDecision = approvalApi.decideApproval({
       analysisDraftId: crypto.randomUUID(),
       inputHash,
@@ -516,10 +569,13 @@ Deno.serve(async (request) => {
       .from("home_buddy_ai_evaluations")
       .insert({
         owner_id: userData.user.id,
+        request_id: requestId,
         workspace_id: payload.workspaceId || null,
         listing_id: listing.id,
         rubric_version: RUBRIC_VERSION,
         model,
+        input_hash: inputHash,
+        policy_version: validatorApi.VALIDATOR_SUITE_VERSION,
         status: approvalDecision.outcome,
         listing_snapshot: listing,
         buyer_context: buyerContext,
@@ -533,24 +589,55 @@ Deno.serve(async (request) => {
       .single();
 
     if (saveError) {
+      await admin
+        .from("home_buddy_evaluation_requests")
+        .update({
+          status: "failed",
+          safe_status_message: "We couldn’t finish this report. Your request is saved.",
+          analysis_completed_at: checkedAt
+        })
+        .eq("id", requestId);
       return jsonResponse(request, {
-        error: "Evaluation completed but could not be saved",
-        details: saveError.message,
-        evaluation
+        error: "Evaluation completed but could not be saved"
       }, 500);
     }
 
+    const canRelease = approvalDecision.outcome === "auto_approved";
+    const requestStatus = canRelease
+      ? "in_review"
+      : (approvalDecision.outcome === "insufficient_evidence" ? "needs_buyer_input" : "failed");
+    const safeStatusMessage = requestStatus === "ready"
+      ? "Your evidence-checked decision packet is ready."
+      : (requestStatus === "in_review"
+        ? "Your analysis is complete and we’re reviewing the evidence before sharing it."
+        : (requestStatus === "needs_buyer_input"
+          ? "One detail would strengthen your report."
+          : "We couldn’t finish a reliable evidence check. Your request is saved."));
+
+    const { error: transitionError } = await admin
+      .from("home_buddy_evaluation_requests")
+      .update({
+        status: requestStatus,
+        safe_status_message: safeStatusMessage,
+        latest_evaluation_id: saved.id,
+        analysis_completed_at: checkedAt,
+        released_at: requestStatus === "ready" ? checkedAt : null
+      })
+      .eq("id", requestId);
+    if (transitionError) {
+      throw new Error("request_transition_failed");
+    }
+
     return jsonResponse(request, {
-      evaluationId: saved.id,
-      createdAt: saved.created_at,
-      model,
-      evaluation: approvalDecision.outcome === "auto_approved" ? evaluation : null,
-      approvalDecision
+      requestId,
+      requestStatus,
+      safeStatusMessage
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI evaluation failed";
     await admin.from("home_buddy_ai_evaluations").insert({
       owner_id: userData.user.id,
+      request_id: requestId,
       workspace_id: payload.workspaceId || null,
       listing_id: listing.id,
       rubric_version: RUBRIC_VERSION,
@@ -560,6 +647,18 @@ Deno.serve(async (request) => {
       evaluation: {},
       error: message
     });
-    return jsonResponse(request, { error: message }, 500);
+    await admin
+      .from("home_buddy_evaluation_requests")
+      .update({
+        status: "failed",
+        safe_status_message: "We couldn’t finish this report. Your request is saved.",
+        analysis_completed_at: new Date().toISOString()
+      })
+      .eq("id", requestId);
+    return jsonResponse(request, {
+      error: "We couldn’t finish this report. Your request is saved.",
+      code: "evaluation_failed",
+      requestId
+    }, 500);
   }
 });

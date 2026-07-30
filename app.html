@@ -3,309 +3,353 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Home-Finding Buddy MVP</title>
-    <meta name="description" content="Private buyer workspace for learning preferences, reviewing listings, and capturing tour debriefs.">
-    <link rel="stylesheet" href="assets/site.css">
+    <title>Home-Finding Buddy</title>
+    <meta name="description" content="Buyer-specific research for the home you are considering—from price and records to risks, fit, and next questions.">
+    <link rel="stylesheet" href="assets/site.css?v=20260729">
   </head>
   <body class="app-body">
-    <header class="site-header">
-      <nav class="nav" aria-label="Primary navigation">
-        <a class="brand" href="#start">Home-Finding Buddy</a>
-        <div class="nav-links">
-          <a href="#start">Start</a>
-          <a href="#conversation">Brief</a>
-          <a href="#listings">Listings</a>
-          <a href="#debrief">Debrief</a>
-          <a href="#account">Account</a>
-          <a href="index.html">Public Site</a>
+    <header class="buddy-header">
+      <nav class="buddy-nav" aria-label="Primary navigation">
+        <a class="buddy-brand" href="#landing" data-view-target="landing" aria-label="Home-Finding Buddy home">
+          <span class="buddy-mark" aria-hidden="true">H</span>
+          <span>Home-Finding Buddy</span>
+        </a>
+        <div class="buddy-nav-links">
+          <button type="button" data-nav-view="landing">Home</button>
+          <button type="button" data-nav-view="results">Saved homes <span class="nav-count" data-listing-count>0</span></button>
+          <button type="button" data-nav-view="workspace">Your preferences</button>
         </div>
+        <button class="account-trigger" type="button" data-nav-view="account" aria-label="Open account">
+          <span aria-hidden="true">⌂</span>
+          <span data-account-state>Local only</span>
+        </button>
       </nav>
     </header>
 
-    <main class="app-shell">
-      <section class="app-flow-hero" id="start">
-        <div class="hero-copy">
-          <p class="eyebrow">Private buyer workspace</p>
-          <h1>Know what is worth touring, skipping, or investigating.</h1>
-          <p class="lede">The app learns from your search notes, listing reactions, and tour debriefs so every house gets judged against what actually matters.</p>
-          <div class="hero-actions">
-            <a class="button" data-primary-action href="#conversation">Build search brief</a>
-            <a class="button secondary" href="#listings">Review listing</a>
-          </div>
-        </div>
+    <main class="buddy-shell">
+      <section class="buddy-view is-active" id="landing" data-view="landing">
+        <div class="entry-hero">
+          <p class="eyebrow">Decision support for homebuyers</p>
+          <h1>Understand a home<br>before you commit.</h1>
+          <p class="entry-lede">Paste a listing and get a buyer-specific analysis of price, risks, public records, and fit.</p>
 
-        <aside class="next-step-panel" aria-label="Current focus">
-          <span class="panel-label">Current focus</span>
-          <strong data-flow-stage-title>Start with buyer context</strong>
-          <p data-flow-stage-detail>Add the basic search frame, then capture what you want in plain language.</p>
-          <div class="flow-meter" aria-label="Workspace progress">
-            <span data-flow-progress></span>
-          </div>
-          <div class="summary-pairs">
-            <div>
-              <span>Account</span>
-              <strong data-account-state>Local only</strong>
+          <form class="listing-entry" data-url-entry>
+            <label for="heroListingUrl">Listing link</label>
+            <div class="listing-entry-control">
+              <span class="entry-icon" aria-hidden="true">⌂</span>
+              <input id="heroListingUrl" type="url" inputmode="url" autocomplete="url" placeholder="Paste a Redfin, Zillow, or listing link" required>
+              <button class="button coral" type="submit">Analyze this home</button>
             </div>
-            <div>
-              <span>Brief</span>
-              <strong data-brief-state>Not started</strong>
-            </div>
-            <div>
-              <span>Listings</span>
-              <strong data-listing-count>0</strong>
-            </div>
-            <div>
-              <span>Debriefs</span>
-              <strong data-debrief-count>0</strong>
-            </div>
-          </div>
-        </aside>
-      </section>
-
-      <section class="task-grid" aria-label="Primary tasks">
-        <a class="task-card" data-task-card="workspace" href="#workspace">
-          <span>1</span>
-          <strong>Set the search frame</strong>
-          <p>Save the basics: household, search area, budget, timeline, and agent context.</p>
-          <em data-task-status="workspace">Start here</em>
-        </a>
-        <a class="task-card" data-task-card="brief" href="#conversation">
-          <span>2</span>
-          <strong>Build or refresh the brief</strong>
-          <p>Talk through priorities, tradeoffs, risks, and the homes that changed your mind.</p>
-          <em data-task-status="brief">Not started</em>
-        </a>
-        <a class="task-card" data-task-card="listing" href="#listings">
-          <span>3</span>
-          <strong>Review a listing</strong>
-          <p>Paste the listing and get a fit, risk, and diligence read against the current brief.</p>
-          <em data-task-status="listing">Waiting on brief</em>
-        </a>
-        <a class="task-card" data-task-card="debrief" href="#debrief">
-          <span>4</span>
-          <strong>Debrief a tour</strong>
-          <p>Capture the drive-back reaction and turn it into better future recommendations.</p>
-          <em data-task-status="debrief">Waiting on listing</em>
-        </a>
-      </section>
-
-      <section class="dashboard-strip" aria-label="Workspace snapshot">
-        <article>
-          <span>Next best action</span>
-          <strong data-next-action>Start the buyer conversation.</strong>
-        </article>
-        <article>
-          <span>Search thesis</span>
-          <strong data-current-thesis>No search thesis yet.</strong>
-        </article>
-        <article>
-          <span>Latest listing read</span>
-          <strong data-latest-review>No listing reviewed yet.</strong>
-        </article>
-      </section>
-
-      <section class="workflow-shell" id="workspace">
-        <div class="section-heading-row">
-          <div>
-            <p class="section-kicker">Search setup</p>
-            <h2>Start with the search frame</h2>
-            <p>The details here keep the rest of the workspace grounded.</p>
-          </div>
-          <button class="button secondary" type="button" data-reset-demo>Reset workspace</button>
-        </div>
-
-        <form class="form-grid workspace-form" data-workspace-form>
-          <div class="field">
-            <label for="householdName">Household</label>
-            <input id="householdName" name="householdName" type="text" placeholder="Michael and Trusha">
-          </div>
-          <div class="field">
-            <label for="searchArea">Search area</label>
-            <input id="searchArea" name="searchArea" type="text" placeholder="Seattle, Bellevue, Eastside">
-          </div>
-          <div class="field">
-            <label for="budgetRange">Budget range</label>
-            <input id="budgetRange" name="budgetRange" type="text" placeholder="$1.8M-$2.3M">
-          </div>
-          <div class="field">
-            <label for="timeline">Timeline</label>
-            <input id="timeline" name="timeline" type="text" placeholder="Actively touring">
-          </div>
-          <div class="field">
-            <label for="agentStatus">Human agent status</label>
-            <input id="agentStatus" name="agentStatus" type="text" placeholder="Working with an agent / self-directed / unsure">
-          </div>
-          <button class="button" type="submit">Save search frame</button>
-        </form>
-      </section>
-
-      <section class="section work-section" id="conversation">
-        <div class="section-heading-row">
-          <div>
-            <p class="section-kicker">Search brief</p>
-            <h2>Talk through what matters</h2>
-            <p>The strongest brief comes from tradeoffs, reactions, worries, and disagreement.</p>
-          </div>
-          <div class="voice-actions">
-            <button class="button secondary" type="button" data-voice-start="conversationNotes">Start voice</button>
-            <button class="button secondary" type="button" data-voice-stop>Stop</button>
-          </div>
-        </div>
-        <div class="prompt-chips" aria-label="Conversation prompts">
-          <button type="button" data-prompt="Current life: ">Current life</button>
-          <button type="button" data-prompt="Future life: ">Future life</button>
-          <button type="button" data-prompt="Tradeoffs: ">Tradeoffs</button>
-          <button type="button" data-prompt="Homes we liked: ">Liked homes</button>
-          <button type="button" data-prompt="Homes we rejected: ">Rejected homes</button>
-          <button type="button" data-prompt="Hidden risks we worry about: ">Hidden risks</button>
-          <button type="button" data-prompt="Partner disagreement: ">Disagreement</button>
-        </div>
-        <div class="field">
-          <label for="conversationNotes">Search notes</label>
-          <textarea id="conversationNotes" data-conversation-notes placeholder="Example: We keep saying walkability matters, but the homes that excite us have quiet streets, privacy, and great hosting space. We are nervous about older systems, drainage, and surprise renovation costs."></textarea>
-        </div>
-        <div class="sticky-actions">
-          <button class="button" type="button" data-generate-brief>Generate search brief</button>
-          <button class="button secondary" type="button" data-save-conversation>Save notes</button>
-          <p class="voice-status" data-voice-status>Voice capture is idle.</p>
-        </div>
-      </section>
-
-      <section class="section work-section" id="brief">
-        <div class="section-heading-row">
-          <div>
-            <p class="section-kicker">Working brief</p>
-            <h2>Buyer Search Brief</h2>
-            <p>This is the standard every listing and tour reaction gets judged against.</p>
-          </div>
-          <button class="button secondary" type="button" data-copy-brief>Copy brief</button>
-        </div>
-        <div class="brief-layout" data-brief-output>
-          <p class="empty-state">Generate a search brief from the buyer conversation.</p>
-        </div>
-        <div class="suggestion-list" data-suggestion-list></div>
-      </section>
-
-      <section class="section work-section" id="listings">
-        <div class="section-heading-row">
-          <div>
-            <p class="section-kicker">Listing screen</p>
-            <h2>Review a home with the evaluation skill</h2>
-            <p>Use this when a saved search, portal, or agent sends a house that might be interesting.</p>
-          </div>
-        </div>
-        <div class="skill-note" aria-label="Evaluation rubric">
-          <strong>Home Evaluation Skill</strong>
-          <p>Every review creates a decision read, negotiation posture, diligence checklist, and rubric sections for schools, safety, comps, condition, title, finances, lifestyle, and physical-site risk. <span data-ai-backend-state>Server AI is not configured yet.</span></p>
-        </div>
-        <form class="form-grid app-form-compact" data-listing-form>
-          <div class="field">
-            <label for="listingUrl">Listing URL</label>
-            <input id="listingUrl" name="listingUrl" type="url" placeholder="https://www.redfin.com/...">
-          </div>
-          <div class="field">
-            <label for="listingAddress">Address</label>
-            <input id="listingAddress" name="listingAddress" type="text" placeholder="123 Main St, Seattle, WA">
-          </div>
-          <div class="field">
-            <label for="listingPrice">Price / status</label>
-            <input id="listingPrice" name="listingPrice" type="text" placeholder="$2,000,000 active">
-          </div>
-          <div class="field app-full">
-            <label for="listingNotes">Listing notes</label>
-            <textarea id="listingNotes" name="listingNotes" placeholder="Paste listing copy, observations, disclosure notes, inspection hints, comps, school notes, taxes, HOA/title details, or what caught your eye."></textarea>
-          </div>
-          <div class="field app-full">
-            <label for="listingQuestions">What should we especially investigate?</label>
-            <textarea id="listingQuestions" name="listingQuestions" required placeholder="Example: Is the asking price supported? What does the inspection imply about near-term costs? How noisy is the street at commute time?"></textarea>
-          </div>
-          <div class="field">
-            <label for="decisionStage">Decision stage</label>
-            <select id="decisionStage" name="decisionStage">
-              <option value="considering-tour">Considering a tour</option>
-              <option value="pre-offer">Considering an offer</option>
-              <option value="active-offer">Preparing an offer</option>
-              <option value="under-contract">Under contract</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="analysisDepth">Analysis depth</label>
-            <select id="analysisDepth" name="analysisDepth">
-              <option value="decision-brief">Decision Brief</option>
-              <option value="deep-decision-pack">Deep Decision Pack</option>
-            </select>
-          </div>
-          <button class="button" type="submit">Review listing</button>
-        </form>
-        <div class="listing-stack" data-listing-stack>
-          <p class="empty-state">No listings reviewed yet.</p>
-        </div>
-      </section>
-
-      <section class="section work-section" id="debrief">
-        <div class="section-heading-row">
-          <div>
-            <p class="section-kicker">Tour memory</p>
-            <h2>Debrief while the reaction is fresh</h2>
-            <p>The debrief updates what the product should pay attention to next time.</p>
-          </div>
-          <div class="voice-actions">
-            <button class="button secondary" type="button" data-voice-start="debriefNotes">Start voice</button>
-            <button class="button secondary" type="button" data-voice-stop>Stop</button>
-          </div>
-        </div>
-        <form class="form-grid" data-debrief-form>
-          <div class="field">
-            <label for="debriefListing">Listing</label>
-            <select id="debriefListing" name="listingId" data-debrief-listing></select>
-          </div>
-          <div class="field">
-            <label for="debriefNotes">Debrief notes</label>
-            <textarea id="debriefNotes" name="debriefNotes" placeholder="What felt better than expected? What felt wrong? What did you disagree on? Would you be excited to go back tomorrow?"></textarea>
-          </div>
-          <button class="button" type="submit">Save debrief</button>
-        </form>
-        <div class="debrief-output" data-debrief-output>
-          <p class="empty-state">No tour debrief saved yet.</p>
-        </div>
-      </section>
-
-      <section class="section auth-panel" id="account">
-        <div class="section-heading-row">
-          <div>
-            <p class="section-kicker">Account</p>
-            <h2>Save this workspace</h2>
-            <p>Use a magic link to sync this browser workspace with Supabase.</p>
-          </div>
-          <span class="status-pill" data-sync-status>Local only</span>
-        </div>
-        <div class="auth-grid">
-          <form class="form-grid" data-auth-form>
-            <div class="field">
-              <label for="authEmail">Email</label>
-              <input id="authEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email">
-            </div>
-            <button class="button" type="submit">Send magic link</button>
+            <p class="field-hint">You can add priorities and documents before the analysis begins.</p>
           </form>
-          <div class="auth-card">
-            <span>Signed in as</span>
-            <strong data-auth-email>Not signed in</strong>
-            <p data-auth-detail>Configure Supabase to enable cloud sync.</p>
-            <div class="hero-actions compact-actions" data-auth-actions>
-              <button class="button secondary" type="button" data-sync-now>Sync now</button>
-              <button class="button secondary" type="button" data-sign-out>Sign out</button>
+
+          <div class="trust-row" aria-label="Why buyers use Home-Finding Buddy">
+            <span><i aria-hidden="true">✓</i> Private by default</span>
+            <span><i aria-hidden="true">✓</i> Sources and unknowns labeled</span>
+            <span><i aria-hidden="true">✓</i> No agent leads or sales calls</span>
+          </div>
+        </div>
+
+        <section class="example-panel" aria-labelledby="example-title">
+          <div>
+            <p class="section-kicker">What you receive</p>
+            <h2 id="example-title">A clear decision, backed by deeper diligence.</h2>
+            <p>See the strongest reasons to pursue, pause, or investigate—then explore the evidence when you need it.</p>
+            <a class="text-link" href="homes/3920-w-barrett-st-seattle-wa-98199.html">See an example decision packet <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="report-preview" aria-label="Example report preview">
+            <span class="preview-label">Example decision read</span>
+            <strong>Promising fit. Investigate before offering.</strong>
+            <div class="preview-grid">
+              <span><b>3</b> strengths</span>
+              <span><b>3</b> risks</span>
+              <span><b>5</b> next questions</span>
             </div>
           </div>
+        </section>
+
+        <section class="returning-section" data-returning-home hidden>
+          <div class="section-heading-row">
+            <div>
+              <p class="section-kicker">Your search</p>
+              <h2>Homes that need your attention</h2>
+            </div>
+            <button class="button secondary" type="button" data-view-target="request">Add another home</button>
+          </div>
+          <div class="dashboard-strip">
+            <article><span>Next best action</span><strong data-next-action>Review a home.</strong></article>
+            <article><span>Your search thesis</span><strong data-current-thesis>Add preferences for more personal recommendations.</strong></article>
+            <article><span>Latest decision</span><strong data-latest-review>No home reviewed yet.</strong></article>
+          </div>
+        </section>
+      </section>
+
+      <section class="buddy-view" id="request" data-view="request" hidden>
+        <div class="flow-topbar">
+          <button class="back-button" type="button" data-request-back aria-label="Go to previous step">←</button>
+          <div class="flow-progress" role="progressbar" aria-label="Request progress" aria-valuemin="1" aria-valuemax="4" aria-valuenow="1">
+            <span class="flow-progress-bar" aria-hidden="true"></span>
+            <small data-request-progress>Step 1 of 4</small>
+          </div>
+          <button class="quiet-button" type="button" data-view-target="landing">Exit</button>
+        </div>
+
+        <div class="request-layout">
+          <div class="request-main">
+            <form class="form-grid app-form-compact guided-request" data-listing-form>
+              <section class="request-step is-active" data-request-step="1">
+                <p class="step-count">Step 1 of 4</p>
+                <h1>Which home are you considering?</h1>
+                <p>We’ll use the listing as a starting point and verify important details independently.</p>
+                <div class="field app-full">
+                  <label for="listingUrl">Listing link</label>
+                  <input id="listingUrl" name="listingUrl" type="url" autocomplete="url" placeholder="https://www.redfin.com/..." required>
+                </div>
+                <div class="field app-full">
+                  <label for="listingAddress">Address <span>Optional</span></label>
+                  <input id="listingAddress" name="listingAddress" type="text" autocomplete="street-address" placeholder="We’ll usually find this from the listing">
+                </div>
+                <div class="field app-full">
+                  <label for="listingPrice">Price or status <span>Optional</span></label>
+                  <input id="listingPrice" name="listingPrice" type="text" placeholder="$1,250,000 · Active">
+                </div>
+                <button class="button coral step-continue" type="button" data-request-next>Continue</button>
+              </section>
+
+              <section class="request-step" data-request-step="2" hidden>
+                <p class="step-count">Step 2 of 4</p>
+                <h1>What would make or break this home for you?</h1>
+                <p>Choose anything important, then tell us what’s specific to your decision.</p>
+                <div class="choice-chips" data-priority-chips>
+                  <button type="button" data-question-prompt="Price and comparable sales">Price & comps</button>
+                  <button type="button" data-question-prompt="Condition and near-term repairs">Condition</button>
+                  <button type="button" data-question-prompt="Neighborhood and safety">Neighborhood</button>
+                  <button type="button" data-question-prompt="Schools and family fit">Schools</button>
+                  <button type="button" data-question-prompt="Commute and daily routine">Commute</button>
+                  <button type="button" data-question-prompt="Noise, privacy, and street feel">Noise & privacy</button>
+                  <button type="button" data-question-prompt="Future resale and appreciation">Resale</button>
+                </div>
+                <div class="field app-full">
+                  <label for="listingQuestions">What should we especially investigate?</label>
+                  <textarea id="listingQuestions" name="listingQuestions" placeholder="Example: We love the layout but worry about traffic noise, drainage, and whether the price is supported."></textarea>
+                </div>
+                <div class="voice-actions">
+                  <button class="button secondary" type="button" data-voice-start="listingQuestions">Speak instead</button>
+                  <button class="button secondary" type="button" data-voice-stop>Stop</button>
+                  <span class="voice-status" data-voice-status>Voice is ready.</span>
+                </div>
+                <div class="step-actions">
+                  <button class="button secondary" type="button" data-request-back>Back</button>
+                  <button class="button coral" type="button" data-request-next>Continue</button>
+                </div>
+              </section>
+
+              <section class="request-step" data-request-step="3" hidden>
+                <p class="step-count">Step 3 of 4</p>
+                <h1>Add anything the listing doesn’t tell us.</h1>
+                <p>Disclosures, inspections, tour notes, and agent materials can make the analysis much sharper.</p>
+                <div class="upload-zone is-coming-soon">
+                  <span class="upload-icon" aria-hidden="true">↑</span>
+                  <strong>Document upload is coming next</strong>
+                  <span>For this release, paste the important excerpts below—or skip this step.</span>
+                </div>
+                <div class="field app-full">
+                  <label for="listingNotes">Listing, disclosure, or tour notes <span>Optional</span></label>
+                  <textarea id="listingNotes" name="listingNotes" placeholder="Paste listing details, disclosure findings, inspection notes, or your own observations."></textarea>
+                </div>
+                <div class="step-actions">
+                  <button class="button secondary" type="button" data-request-back>Back</button>
+                  <button class="button coral" type="button" data-request-next>Review request</button>
+                </div>
+              </section>
+
+              <section class="request-step" data-request-step="4" hidden>
+                <p class="step-count">Step 4 of 4</p>
+                <h1>Choose the right level of diligence.</h1>
+                <p>You can update the request later if new information arrives.</p>
+                <div class="field app-full">
+                  <label for="decisionStage">What are you deciding?</label>
+                  <select id="decisionStage" name="decisionStage">
+                    <option value="considering-tour">Is it worth touring?</option>
+                    <option value="pre-offer">Should I consider an offer?</option>
+                    <option value="active-offer">I’m preparing an offer</option>
+                    <option value="under-contract">I’m already under contract</option>
+                  </select>
+                </div>
+                <div class="depth-options">
+                  <label>
+                    <input type="radio" name="analysisDepthChoice" value="decision-brief" checked>
+                    <span><strong>Decision brief</strong><small>A focused initial read for deciding whether to tour or investigate.</small></span>
+                  </label>
+                  <label>
+                    <input type="radio" name="analysisDepthChoice" value="deep-decision-pack">
+                    <span><strong>Deep decision packet</strong><small>More complete diligence for a serious purchase decision.</small></span>
+                  </label>
+                </div>
+                <select id="analysisDepth" name="analysisDepth" class="visually-hidden" tabindex="-1" aria-hidden="true">
+                  <option value="decision-brief">Decision Brief</option>
+                  <option value="deep-decision-pack">Deep Decision Pack</option>
+                </select>
+                <div class="request-reassurance">
+                  <strong>We check the claims—not just summarize the listing.</strong>
+                  <p>Facts, assumptions, unknowns, and source dates are separated in every evidence-backed report.</p>
+                </div>
+                <div class="step-actions sticky-mobile">
+                  <button class="button secondary" type="button" data-request-back>Back</button>
+                  <button class="button coral" type="submit" data-submit-analysis>Start analysis</button>
+                </div>
+              </section>
+            </form>
+          </div>
+          <aside class="request-aside">
+            <span class="panel-label">Your private request</span>
+            <strong data-request-summary-home>Paste a listing to begin</strong>
+            <p data-request-summary-priorities>We’ll tailor the research to your specific questions.</p>
+            <div class="privacy-note"><span aria-hidden="true">⌾</span><p><strong>Private by default</strong>Your notes and decision limits are never published.</p></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="buddy-view" id="processing" data-view="processing" hidden>
+        <div class="processing-card">
+          <div class="processing-orbit" aria-hidden="true"><span>⌂</span></div>
+          <p class="section-kicker">Analysis underway</p>
+          <h1 data-processing-status aria-live="polite">We’re checking the claims—not just summarizing the listing.</h1>
+          <p data-processing-detail>You can leave this page. Your request and any completed result will stay in your workspace.</p>
+          <div class="processing-progress" aria-hidden="true"><span data-processing-progress></span></div>
+          <ol class="analysis-timeline" data-analysis-timeline>
+            <li class="is-complete" data-analysis-stage="ready"><i>✓</i><span><strong>Listing captured</strong><small>Request details saved</small></span></li>
+            <li class="is-active" data-analysis-stage="processing"><i></i><span><strong>Checking evidence</strong><small>Property facts, records, and market context</small></span></li>
+            <li data-analysis-stage="processing"><i></i><span><strong>Matching your priorities</strong><small>Fit, risks, and decision questions</small></span></li>
+            <li data-analysis-stage="complete"><i></i><span><strong>Preparing your decision brief</strong><small>Evidence and unknowns clearly separated</small></span></li>
+          </ol>
+          <button class="button secondary" type="button" data-view-target="results">View saved homes</button>
+        </div>
+      </section>
+
+      <section class="buddy-view" id="results" data-view="results" hidden>
+        <div class="results-header">
+          <div>
+            <p class="section-kicker">Your homes</p>
+            <h1>Decision packets</h1>
+            <p>Every home stays connected to the evidence, questions, and reactions that shaped your decision.</p>
+          </div>
+          <button class="button coral" type="button" data-view-target="request">Add another home</button>
+        </div>
+        <div class="listing-stack decision-stack" data-listing-stack>
+          <div class="polished-empty">
+            <span aria-hidden="true">⌂</span>
+            <h2>No homes yet</h2>
+            <p>Paste a listing to create your first buyer-specific decision packet.</p>
+            <button class="button coral" type="button" data-view-target="request">Analyze a home</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="buddy-view" id="profile" data-view="workspace" hidden>
+        <div class="profile-header">
+          <p class="section-kicker">Your preferences</p>
+          <h1>Make every recommendation more personal.</h1>
+          <p>This is optional. The more context you share, the better we can distinguish a technically good house from the right house for you.</p>
+        </div>
+        <section class="profile-card" id="workspace">
+          <div class="section-heading-row">
+            <div><h2>Your search</h2><p>Keep this broad; details can evolve as you tour.</p></div>
+            <button class="quiet-button" type="button" data-reset-demo>Reset workspace</button>
+          </div>
+          <form class="form-grid workspace-form" data-workspace-form>
+            <div class="field"><label for="householdName">Household</label><input id="householdName" name="householdName" type="text" placeholder="You or your household"></div>
+            <div class="field"><label for="searchArea">Search area</label><input id="searchArea" name="searchArea" type="text" placeholder="Seattle, Bellevue, Eastside"></div>
+            <div class="field"><label for="budgetRange">Comfortable range</label><input id="budgetRange" name="budgetRange" type="text" placeholder="$1.2M–$1.5M"></div>
+            <div class="field"><label for="timeline">Timeline</label><input id="timeline" name="timeline" type="text" placeholder="Actively touring"></div>
+            <div class="field"><label for="agentStatus">Agent relationship</label><input id="agentStatus" name="agentStatus" type="text" placeholder="Working with an agent"></div>
+            <button class="button coral" type="submit">Save search</button>
+          </form>
+        </section>
+        <section class="profile-card" id="conversation">
+          <div class="section-heading-row">
+            <div><h2>Tell us what matters</h2><p>Talk naturally about your life, tradeoffs, worries, and past reactions.</p></div>
+            <div class="voice-actions"><button class="button secondary" type="button" data-voice-start="conversationNotes">Speak</button><button class="button secondary" type="button" data-voice-stop>Stop</button></div>
+          </div>
+          <div class="prompt-chips">
+            <button type="button" data-prompt="Current life: ">Daily life</button>
+            <button type="button" data-prompt="Future life: ">Future plans</button>
+            <button type="button" data-prompt="Tradeoffs: ">Tradeoffs</button>
+            <button type="button" data-prompt="Homes we liked: ">Homes we liked</button>
+            <button type="button" data-prompt="Homes we rejected: ">Homes we rejected</button>
+            <button type="button" data-prompt="Hidden risks we worry about: ">Worries</button>
+          </div>
+          <div class="field"><label for="conversationNotes">Your notes</label><textarea id="conversationNotes" data-conversation-notes placeholder="We say walkability matters, but the homes that excite us have quiet streets, privacy, and a great place to host..."></textarea></div>
+          <div class="step-actions"><button class="button secondary" type="button" data-save-conversation>Save notes</button><button class="button coral" type="button" data-generate-brief>Update my preferences</button><span class="voice-status" data-voice-status>Voice is ready.</span></div>
+        </section>
+        <section class="profile-card" id="brief">
+          <div class="section-heading-row"><div><h2>Your Buyer Search Brief</h2><p>The evolving standard used to evaluate future homes.</p></div><button class="button secondary" type="button" data-copy-brief>Copy brief</button></div>
+          <div class="brief-layout" data-brief-output><p class="empty-state">Add some context to create your Buyer Search Brief.</p></div>
+          <div class="suggestion-list" data-suggestion-list></div>
+        </section>
+        <div class="visually-hidden" aria-hidden="true">
+          <span data-brief-state>Not started</span><span data-debrief-count>0</span>
+          <span data-flow-stage-title></span><span data-flow-stage-detail></span><span data-flow-progress></span>
+          <a data-primary-action href="#request"></a>
+          <a data-task-card="workspace"><em data-task-status="workspace"></em></a>
+          <a data-task-card="brief"><em data-task-status="brief"></em></a>
+          <a data-task-card="listing"><em data-task-status="listing"></em></a>
+          <a data-task-card="debrief"><em data-task-status="debrief"></em></a>
+        </div>
+      </section>
+
+      <section class="buddy-view" id="debrief" data-view="debrief" hidden>
+        <div class="profile-header">
+          <p class="section-kicker">After the tour</p>
+          <h1>You saw it in person. What changed?</h1>
+          <p>Capture the drive-back reaction while it is fresh. We’ll use it to sharpen future recommendations.</p>
+        </div>
+        <section class="profile-card">
+          <form class="form-grid" data-debrief-form>
+            <div class="field"><label for="debriefListing">Home</label><select id="debriefListing" name="listingId" data-debrief-listing></select></div>
+            <div class="field"><label for="debriefNotes">Your reaction</label><textarea id="debriefNotes" name="debriefNotes" placeholder="What felt better or worse? What surprised you? Would you be excited to go back tomorrow?"></textarea></div>
+            <div class="voice-actions"><button class="button secondary" type="button" data-voice-start="debriefNotes">Speak</button><button class="button secondary" type="button" data-voice-stop>Stop</button></div>
+            <button class="button coral" type="submit">Save tour reaction</button>
+          </form>
+          <div class="debrief-output" data-debrief-output><p class="empty-state">No tour reaction saved yet.</p></div>
+        </section>
+      </section>
+
+      <section class="buddy-view" id="account" data-view="account" hidden>
+        <div class="account-layout">
+          <div>
+            <p class="section-kicker">Your account</p>
+            <h1>Save your request and begin the private analysis.</h1>
+            <p><strong data-active-listing-title>This home</strong> is saved in this browser. Sign in with a secure email link to continue the evidence check and keep the result available across devices.</p>
+          </div>
+          <section class="account-card">
+            <span class="status-pill" data-sync-status>Local only</span>
+            <form class="form-grid" data-auth-form>
+              <div class="field"><label for="authEmail">Email</label><input id="authEmail" name="email" type="email" placeholder="you@example.com" autocomplete="email"></div>
+              <button class="button coral" type="submit">Email me a sign-in link</button>
+            </form>
+            <div class="auth-card">
+              <span>Signed in as</span>
+              <strong data-auth-email>Not signed in</strong>
+              <p data-auth-detail>Your current work is saved in this browser.</p>
+              <div class="hero-actions compact-actions" data-auth-actions>
+                <button class="button secondary" type="button" data-sync-now>Sync now</button>
+                <button class="button secondary" type="button" data-sign-out>Sign out</button>
+              </div>
+            </div>
+            <p class="backend-note" data-ai-backend-state>Sign in to request an evidence-backed analysis.</p>
+          </section>
         </div>
       </section>
     </main>
 
-    <footer class="footer">
-      <p>Research aid only. Verify facts with qualified professionals before relying on any brief for an offer or purchase decision.</p>
+    <footer class="buddy-footer">
+      <p>Home-Finding Buddy is a research aid—not legal, inspection, appraisal, financing, or tax advice.</p>
+      <button type="button" data-view-target="account">Privacy & account</button>
     </footer>
 
-    <script src="assets/config.js"></script>
+    <script src="assets/config.js?v=20260729"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="assets/buddy-app.js"></script>
+    <script src="assets/buddy-app.js?v=20260729"></script>
   </body>
 </html>

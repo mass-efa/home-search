@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Report Review · Home-Finding Buddy</title>
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="stylesheet" href="assets/site.css?v=20260730">
+  </head>
+  <body class="app-body reviewer-body">
+    <header class="buddy-header">
+      <nav class="buddy-nav reviewer-nav" aria-label="Reviewer navigation">
+        <a class="buddy-brand" href="review.html"><span class="buddy-mark">H</span><span>Report review</span></a>
+        <span class="reviewer-private-label">Private internal workspace</span>
+        <button class="account-trigger" type="button" data-reviewer-sign-out hidden>Sign out</button>
+      </nav>
+    </header>
+
+    <main class="reviewer-shell">
+      <section class="reviewer-auth" data-reviewer-auth>
+        <p class="section-kicker">Authorized reviewers only</p>
+        <h1>Sign in to review reports.</h1>
+        <p>Use the email address provisioned as a Home-Finding Buddy reviewer.</p>
+        <div class="reviewer-prereq" data-reviewer-prereq>
+          <strong>Preview mode</strong>
+          <p>This local file shows the interface, but reviewer sign-in becomes available only after the protected database workflow is deployed.</p>
+        </div>
+        <form class="reviewer-auth-form" data-reviewer-auth-form>
+          <label for="reviewerEmail">Email</label>
+          <input id="reviewerEmail" name="email" type="email" autocomplete="email" required>
+          <button class="button coral" type="submit" data-reviewer-auth-submit disabled>Email me a sign-in link</button>
+        </form>
+        <p class="voice-status" data-reviewer-auth-status></p>
+      </section>
+
+      <section class="reviewer-workspace" data-reviewer-workspace hidden>
+        <div class="results-header">
+          <div>
+            <p class="section-kicker">First-five operations</p>
+            <h1>Report review</h1>
+            <p>Check evidence and decision quality before a report reaches the buyer.</p>
+          </div>
+          <button class="button secondary" type="button" data-refresh-review-queue>Refresh</button>
+        </div>
+
+        <div class="review-summary" aria-label="Review queue summary">
+          <button type="button" data-review-filter="in_review" aria-pressed="true"><span>Needs review</span><strong data-review-count="in_review">0</strong></button>
+          <button type="button" data-review-filter="needs_buyer_input" aria-pressed="false"><span>Needs buyer input</span><strong data-review-count="needs_buyer_input">0</strong></button>
+          <button type="button" data-review-filter="ready" aria-pressed="false"><span>Released</span><strong data-review-count="ready">0</strong></button>
+          <button type="button" data-review-filter="failed" aria-pressed="false"><span>Failed</span><strong data-review-count="failed">0</strong></button>
+        </div>
+
+        <div class="reviewer-layout">
+          <section>
+            <div class="review-queue" data-review-queue aria-live="polite">
+              <p>Loading the review queue…</p>
+            </div>
+          </section>
+          <aside class="review-detail" data-review-detail>
+            <div class="review-detail-empty">
+              <span aria-hidden="true">✓</span>
+              <h2>Select a report</h2>
+              <p>Open a report to inspect its decision, evidence, unknowns, and release checks.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="assets/config.js?v=20260730-1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="assets/reviewer-app.js?v=20260730-1"></script>
+  </body>
+</html>

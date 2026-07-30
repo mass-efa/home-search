@@ -4,7 +4,14 @@
 
 The MVP must be usable by a real buyer from the first session.
 
-That means the product should not start as an admin tool, a static demo, or a fully automated research engine. It should start as a buyer-facing workspace that captures preferences, reviews listings, and improves over time. Behind the scenes, some analysis can be manual or semi-manual at first, but the user experience should feel coherent and useful.
+That means the product should not start as an admin tool, a static demo, or a fully automated research engine. It should start with the buyer's immediate job: turn a listing they are considering into a decision-ready review. Behind the scenes, some analysis can be manual or semi-manual at first, but the user experience should feel coherent and useful.
+
+The acquisition promise and retention promise are related but distinct:
+
+- Acquire with a decision packet for one home.
+- Retain with a private home-buying second brain that learns from listings, tours, and changing preferences.
+
+The Buyer Search Brief makes future reviews better, but it must not block a buyer from submitting their first home.
 
 ## Target User
 
@@ -32,14 +39,25 @@ Home-Finding Buddy helps buyers:
 
 ## First-Time User Experience
 
-### 1. Create Search Workspace
+The default first-time flow is listing-first and progressively disclosed:
 
-The buyer starts a private search workspace.
+1. Paste a Redfin or other listing URL.
+2. Choose the decision stage: researching, considering a tour, considering an offer, preparing an offer, or under contract.
+3. Describe what matters for this decision, using suggested topics plus an open text field.
+4. Optionally add disclosures, inspection reports, tour notes, or other files.
+5. Sign in when submitting so the request and result can be saved privately.
+6. See a durable request page with clear analysis progress.
+7. Return to a decision-first result.
 
-Required fields:
+The interface should preserve work before sign-in and should not ask for information that is not yet needed. Privacy, evidence limits, and the expected result should be clear at the point of submission.
+
+### Optional Search Context
+
+The buyer can add household and search context before or after the first request. It should improve the analysis without feeling like an onboarding requirement.
+
+Useful fields:
 
 - Buyer name or household name.
-- Email.
 - Search area, if known.
 - Budget range, if comfortable sharing.
 - Timeline.
@@ -51,9 +69,9 @@ The product should make privacy explicit:
 - Listing reviews and notes are not public.
 - Sharing with an agent or partner is optional.
 
-### 2. Guided Buyer Conversation
+### Optional Guided Buyer Conversation
 
-The first session should feel conversational, not like a mortgage form.
+After the buyer submits or receives value from a first review, the product should invite them to sharpen future recommendations through a conversational experience, not a mortgage-style form.
 
 The product asks about:
 
@@ -68,7 +86,7 @@ The product asks about:
 
 The user can answer by voice or typing. Voice is especially valuable because the buyer can talk naturally with a partner.
 
-### 3. Generate Buyer Search Brief
+### Generate Buyer Search Brief
 
 After the guided conversation, the product creates a structured brief.
 
@@ -86,9 +104,41 @@ Sections:
 - What to ask a human agent.
 - What the product should pay special attention to in future listing reviews.
 
-First aha moment:
+Second-brain aha moment:
 
 > "This says what we want better than we could."
+
+The brief is an accelerator for repeated use, not a prerequisite for the first listing review.
+
+## Activation Funnel
+
+The immediate release should optimize this sequence:
+
+1. Landing or app entry viewed.
+2. Listing URL entered.
+3. Request flow started.
+4. Decision stage selected.
+5. Buyer priorities provided.
+6. Optional documents added.
+7. Sign-in completed.
+8. First request submitted.
+9. Result completed.
+10. Result opened.
+
+The primary activation metric is:
+
+> Percentage of qualified visitors who submit a first real listing and open the completed result.
+
+Supporting activation metrics:
+
+- Listing URL entry rate.
+- Completion rate at each request step.
+- Time to first request.
+- Sign-in completion rate.
+- Request-to-result completion time.
+- Result open rate.
+
+Instrument events for every funnel step before materially expanding the feature set.
 
 ## Recurring Product Loop
 
@@ -132,6 +182,27 @@ Second aha moment:
 
 > "It helped us avoid a bad tour or notice a hidden issue before getting emotionally attached."
 
+## Result Experience
+
+Every completed review should have a dedicated result view. The first screen must answer four questions within seconds:
+
+1. What is the recommendation?
+2. Why?
+3. What are the largest risks or unknowns?
+4. What should the buyer do next?
+
+Use this hierarchy:
+
+1. Decision summary: tour, investigate, pursue, pause, or another stage-appropriate recommendation.
+2. Three strongest reasons supporting the recommendation.
+3. Three largest risks or unknowns.
+4. Questions or facts that could change the recommendation.
+5. Detailed diligence sections with evidence.
+6. Sources and checked dates.
+7. Next actions: ask a follow-up, add a document, share privately, compare another home, or debrief after touring.
+
+Detailed Barrett-style analysis remains a core output, but it belongs beneath this executive decision layer. Facts, assumptions, buyer-specific fit, risks, and unknowns must remain visibly distinct.
+
 ### 3. Voice Tour Debrief
 
 After a tour, the buyer taps `Debrief this home`.
@@ -172,14 +243,57 @@ The buyer approves or rejects profile updates.
 
 ## MVP Screens
 
-### Buyer Home
+### Listing Request
+
+The primary first-time screen.
+
+Must support:
+
+- Listing URL as the dominant entry point.
+- Decision-stage selection.
+- Suggested investigation topics plus free-form priorities.
+- Optional document upload affordance.
+- Progressive disclosure and saved in-progress answers.
+- Sign-in at submission rather than before value is clear.
+- Clear privacy and research-aid framing.
+
+### Request Status
+
+Created immediately after submission.
+
+Shows human-readable progress such as:
+
+- Gathering property facts.
+- Reviewing price and comparable sales.
+- Checking records and location risks.
+- Matching the home to buyer priorities.
+- Preparing the decision brief.
+
+The user should know that the request succeeded, what happens next, and how they will learn that it is ready.
+
+### Listing Result
 
 Shows:
 
+- Decision summary.
+- Strongest reasons.
+- Largest risks and unknowns.
+- Recommendation-changing questions.
+- Detailed diligence and evidence.
+- Sources and checked dates.
+- Follow-up and next-step actions.
+
+### Buyer Home
+
+This becomes the primary returning-user screen after the buyer has submitted a request.
+
+Shows:
+
+- Homes requiring attention.
+- New or completed results.
+- Decision deadlines, when known.
+- Recent tour reactions.
 - Current Buyer Search Brief summary.
-- Saved listings.
-- Recent recommendations.
-- Open questions.
 - Next suggested action.
 
 Primary actions:
@@ -211,18 +325,6 @@ Must support:
 - Approve suggested updates.
 - Share link.
 - Export/copy summary.
-
-### Listing Review
-
-Shows:
-
-- Recommendation.
-- Fit/risk score.
-- Buyer-specific match/mismatch.
-- Diligence checklist.
-- Tour checklist.
-- Open questions.
-- Debrief button.
 
 ### Tour Debrief
 
@@ -333,14 +435,15 @@ Those can come later. The MVP should own buyer memory and listing judgment, not 
 
 Activation:
 
-- Buyer completes first conversation.
-- Buyer generates Buyer Search Brief.
-- Buyer says the brief is accurate or useful.
+- Buyer submits a first real listing.
+- Buyer opens the completed result.
+- Buyer says the review increased confidence or revealed something new.
 
 Engagement:
 
 - Buyer submits at least 3 listings.
 - Buyer completes at least 1 tour debrief.
+- Buyer asks at least 1 follow-up question or adds a document.
 - Buyer accepts at least 1 profile update suggestion.
 
 Value:
@@ -354,21 +457,38 @@ Retention:
 
 - Buyer returns before reviewing a new listing.
 - Buyer returns after a tour to debrief.
+- Buyer submits a second listing within 14 days.
 - Buyer says the product understands their search better over time.
 
-## First Build Slice
+## Release Sequence
 
-Build in this order:
+### Immediate Release: First Request And Result
 
-1. Auth and private workspace.
-2. Buyer conversation with text input.
-3. Buyer Search Brief generation.
-4. Add listing form.
-5. Buyer-specific listing review output.
-6. Tour debrief capture, text first.
-7. Voice input for debrief.
-8. Profile update suggestions.
-9. Shareable Buyer Search Brief.
-10. Internal admin queue.
+Build and validate:
+
+1. Mobile-first, listing-URL-first entry.
+2. Progressive request questions.
+3. Optional document intake.
+4. Sign-in at submission with in-progress answers preserved.
+5. Durable request status and analysis progress.
+6. Decision-summary-first result page.
+7. Sources, checked dates, evidence limits, and next actions.
+8. Funnel instrumentation from URL entry through result open.
+9. Internal review or exception handling needed to deliver trustworthy results.
+
+### Later Retention Work: The Buyer Second Brain
+
+Build after the first-request funnel is usable and measurable:
+
+1. Returning buyer home.
+2. Guided buyer conversation.
+3. Buyer Search Brief generation and editing.
+4. Saved homes and result history.
+5. Tour debrief capture, text first.
+6. Voice input for debrief.
+7. Profile update suggestions.
+8. Follow-up questions and document additions.
+9. Side-by-side comparison.
+10. Partner or advisor sharing.
 
 The MVP should be voice-shaped, with text fallback. The product should treat voice transcripts as first-class search memory from the beginning, while preserving typed input for noisy cars, privacy-sensitive moments, unsupported browsers, and quick edits.
