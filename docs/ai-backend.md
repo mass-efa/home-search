@@ -8,7 +8,7 @@ The browser still creates an instant local screening read. When the backend is c
 
 1. The signed-in browser calls a Supabase Edge Function.
 2. The Edge Function verifies the Supabase auth token.
-3. The function sends listing context, buyer brief, workspace context, and the `home-evaluation` rubric to the OpenAI Responses API.
+3. The function sends listing context, buyer brief, workspace context, the `home-evaluation` rubric, and up to three explicitly authorized private PDFs to the OpenAI Responses API.
 4. The generator returns structured JSON with the required evaluation sections.
 5. The function builds an immutable Decision Brief candidate, runs deterministic
    validators, and runs a separately prompted independent evaluator against the
@@ -17,9 +17,8 @@ The browser still creates an instant local screening read. When the backend is c
    `insufficient_evidence`, or `failed`.
 7. The function saves the candidate, validator results, independent evaluation,
    and approval manifest to `public.home_buddy_ai_evaluations`.
-8. The browser displays the server result only when it is `auto_approved`.
-   Otherwise it shows the safe exception state and preserves the separate local
-   screening read.
+8. The browser displays only an immutable result released to the buyer. Otherwise
+   it shows the safe request state and preserves the separate local screening read.
 
 ## Files
 
@@ -30,11 +29,15 @@ The browser still creates an instant local screening read. When the backend is c
 
 ## Required Supabase Setup
 
-Run the updated `supabase/schema.sql` in the Supabase SQL editor. It creates:
+Run `supabase/schema.sql`, then apply every numbered migration in order. The
+current document and operations release additionally requires
+`202608020003_private_documents_and_operations.sql`. It creates:
 
 - `public.home_buddy_workspaces`
 - `public.home_buddy_ai_evaluations`
 - Row Level Security policies so users can access only their own rows
+- A private, owner-prefixed PDF/image bucket and document metadata
+- Operational events, bounded retries, and disabled-by-default release controls
 
 ## Edge Function Secrets
 
@@ -86,6 +89,7 @@ live source adapters are connected. It uses:
 - Buyer Search Brief
 - Conversation notes
 - Pasted listing notes
+- Up to three private buyer-uploaded PDFs, supplied as untrusted file inputs
 - The `skills/home-evaluation` rubric
 
 It generates:
@@ -111,6 +115,13 @@ or mismatched results fail closed. Automatic delivery still defaults off until
 the migration, deployment, source-rights check, and deployed end-to-end
 rehearsal pass.
 
+Uploaded PDFs are staged in the buyer's browser, uploaded only after sign-in,
+and attached to the owner-scoped request. The Edge Function creates a short-lived
+signed URL for the model call; neither the signed URL nor document contents belong
+in analytics or operational metadata. PDF text and page images are available to
+the model, but document-derived claims must still preserve page references,
+evidence limits, and the normal review gates.
+
 ## Next Backend Step
 
 The next improvement is an evidence-gathering job before the model call:
@@ -119,7 +130,7 @@ The next improvement is an evidence-gathering job before the model call:
 - County/tax record lookup
 - School boundary lookup
 - Official crime/safety source lookup where available
-- Permit/title/disclosure upload support
+- Page-level document citation reconciliation and document-retention controls
 - Comparable sales collection
 
 That will turn the backend from a structured AI screening read into a source-backed home evaluation pipeline.

@@ -3,6 +3,10 @@
   var UI_STATE_KEY = "homeFindingBuddyMvp.ui.v1";
   var FUNNEL_KEY = "homeFindingBuddyMvp.funnel.v1";
   var PENDING_ANALYSIS_KEY = "homeFindingBuddyMvp.pendingAnalysis.v1";
+  var REQUEST_DRAFT_KEY = "homeFindingBuddyMvp.requestDraft.v1";
+  var DOCUMENT_STAGE_KEY = "homeFindingBuddyMvp.documentStage.v1";
+  var DOCUMENT_DB_NAME = "homeFindingBuddyMvp.privateDocuments.v1";
+  var DOCUMENT_STORE_NAME = "stagedDocuments";
 
   var defaultState = {
     workspace: {
@@ -39,6 +43,14 @@
     return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 9);
   }
 
+  function applyProductBrand() {
+    var name = text(window.HOME_SEARCH_PRODUCT_NAME) || "Home-Finding Buddy";
+    document.querySelectorAll("[data-product-name]").forEach(function (node) {
+      node.textContent = name;
+    });
+    document.title = name;
+  }
+
   function loadUiState() {
     try {
       var saved = JSON.parse(sessionStorage.getItem(UI_STATE_KEY) || "null");
@@ -46,6 +58,7 @@
         activeView: "",
         requestStep: 1,
         activeListingId: null,
+        editingListingId: null,
         pendingAnalysisListingId: null,
         authRetryAfter: null
       }, saved || {});
@@ -56,6 +69,7 @@
         activeView: "",
         requestStep: 1,
         activeListingId: null,
+        editingListingId: null,
         pendingAnalysisListingId: null,
         authRetryAfter: null
       };
@@ -261,6 +275,230 @@
     var trimmed = text(value);
     if (!trimmed) return "";
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
+
+  function loadDocumentStage() {
+    try {
+      var value = JSON.parse(localStorage.getItem(DOCUMENT_STAGE_KEY) || "[]");
+      return Array.isArray(value) ? value.slice(0, 3) : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveDocumentStage(items) {
+    try { localStorage.setItem(DOCUMENT_STAGE_KEY, JSON.stringify(items.slice(0, 3))); } catch (error) {}
+  }
+
+  function openDocumentDb() {
+    return new Promise(function (resolve, reject) {
+      if (!window.indexedDB) {
+        reject(new Error("Private document staging is unavailable in this browser."));
+        return;
+      }
+      var request = window.indexedDB.open(DOCUMENT_DB_NAME, 1);
+      request.onupgradeneeded = function () {
+        if (!request.result.objectStoreNames.contains(DOCUMENT_STORE_NAME)) {
+          request.result.createObjectStore(DOCUMENT_STORE_NAME, { keyPath: "id" });
+        }
+      };
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { reject(request.error || new Error("Could not stage documents.")); };
+    });
+  }
+
+  async function clearStagedDocuments(ids) {
+    var targets = Array.isArray(ids) ? ids : loadDocumentStage().map(function (item) { return item.id; });
+    if (targets.length) {
+      try {
+        var db = await openDocumentDb();
+        await new Promise(function (resolve, reject) {
+          var transaction = db.transaction(DOCUMENT_STORE_NAME, "readwrite");
+          var store = transaction.objectStore(DOCUMENT_STORE_NAME);
+          targets.forEach(function (id) { store.delete(id); });
+          transaction.oncomplete = resolve;
+          transaction.onerror = function () { reject(transaction.error); };
+        });
+        db.close();
+      } catch (error) {}
+    }
+    var targetSet = new Set(targets);
+    saveDocumentStage(loadDocumentStage().filter(function (item) { return !targetSet.has(item.id); }));
+    renderDocumentSelection();
+    updateRequestReview();
+  }
+
+  async function stageDocumentFiles(fileList) {
+    var files = Array.from(fileList || []).slice(0, 3);
+    if (!files.length) return;
+    var invalid = files.find(function (file) {
+      return file.type !== "application/pdf" || file.size <= 0 || file.size > 20 * 1024 * 1024;
+    });
+    if (invalid) {
+      window.alert("Choose PDF files no larger than 20 MB each.");
+      return;
+    }
+    await clearStagedDocuments();
+    var records = files.map(function (file) {
+      return {
+        id: createId("document"),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        blob: file,
+        createdAt: new Date().toISOString()
+      };
+    });
+    var db = await openDocumentDb();
+    await new Promise(function (resolve, reject) {
+      var transaction = db.transaction(DOCUMENT_STORE_NAME, "readwrite");
+      var store = transaction.objectStore(DOCUMENT_STORE_NAME);
+      records.forEach(function (record) { store.put(record); });
+      transaction.oncomplete = resolve;
+      transaction.onerror = function () { reject(transaction.error || new Error("Could not stage documents.")); };
+    });
+    db.close();
+    saveDocumentStage(records.map(function (record) {
+      return { id: record.id, name: record.name, type: record.type, size: record.size };
+    }));
+    renderDocumentSelection();
+    updateRequestReview();
+    trackFunnel("documents_added", { documentCount: records.length });
+  }
+
+  function renderDocumentSelection() {
+    var target = document.querySelector("[data-document-selection]");
+    if (!target) return;
+    var items = loadDocumentStage();
+    if (!items.length) {
+      target.textContent = "No documents selected.";
+      return;
+    }
+    target.innerHTML = "<strong>Ready for secure upload after sign-in</strong><ul>" + items.map(function (item) {
+      return "<li>" + escapeHtml(item.name) + " · " + Math.max(1, Math.round(item.size / 1024 / 1024)) + " MB</li>";
+    }).join("") + "</ul>";
+  }
+
+  async function getStagedDocumentRecords(ids) {
+    if (!ids || !ids.length) return [];
+    var db = await openDocumentDb();
+    var records = await Promise.all(ids.map(function (id) {
+      return new Promise(function (resolve) {
+        var request = db.transaction(DOCUMENT_STORE_NAME, "readonly").objectStore(DOCUMENT_STORE_NAME).get(id);
+        request.onsuccess = function () { resolve(request.result || null); };
+        request.onerror = function () { resolve(null); };
+      });
+    }));
+    db.close();
+    return records.filter(Boolean);
+  }
+
+  function safeDocumentName(value) {
+    return String(value || "document.pdf").replace(/[^A-Za-z0-9._-]+/g, "-").slice(-100);
+  }
+
+  async function uploadListingDocuments(listing) {
+    var stageIds = Array.isArray(listing.documentStageIds) ? listing.documentStageIds : [];
+    if (!stageIds.length) return Array.isArray(listing.documentIds) ? listing.documentIds : [];
+    var records = await getStagedDocumentRecords(stageIds);
+    if (records.length !== stageIds.length) {
+      throw new Error("Please reselect the PDFs for this request before running the analysis.");
+    }
+    if ((listing.documentIds || []).length + records.length > 3) {
+      throw new Error("This request supports up to three PDFs. Start a revision after removing an earlier document.");
+    }
+    var documentIds = Array.isArray(listing.documentIds) ? listing.documentIds.slice() : [];
+    for (var i = 0; i < records.length; i += 1) {
+      var record = records[i];
+      var storagePath = remote.user.id + "/" + listing.id + "/" + record.id + "-" + safeDocumentName(record.name);
+      var upload = await remote.client.storage
+        .from("home-buddy-private-documents")
+        .upload(storagePath, record.blob, { contentType: record.type, upsert: false });
+      if (upload.error) throw new Error("Document upload failed. Your request is still saved.");
+      var metadata = await remote.client.from("home_buddy_documents").insert({
+        owner_id: remote.user.id,
+        workspace_id: remote.workspaceId || null,
+        storage_path: storagePath,
+        original_filename: record.name,
+        media_type: record.type,
+        byte_size: record.size
+      }).select("id").single();
+      if (metadata.error || !metadata.data) throw new Error("Document registration failed. Your request is still saved.");
+      documentIds.push(metadata.data.id);
+    }
+    listing.documentIds = documentIds;
+    listing.documentStageIds = [];
+    await clearStagedDocuments(stageIds);
+    trackFunnel("documents_added", { documentCount: documentIds.length, success: true });
+    return documentIds;
+  }
+
+  function saveRequestDraft(form) {
+    if (!form) return;
+    try {
+      var data = new FormData(form);
+      localStorage.setItem(REQUEST_DRAFT_KEY, JSON.stringify({
+        listingUrl: text(data.get("listingUrl")),
+        listingAddress: text(data.get("listingAddress")),
+        listingPrice: text(data.get("listingPrice")),
+        listingQuestions: text(data.get("listingQuestions")),
+        listingNotes: text(data.get("listingNotes")),
+        decisionStage: text(data.get("decisionStage")),
+        analysisDepthChoice: text(data.get("analysisDepthChoice"))
+      }));
+    } catch (error) {
+      // Draft recovery is best-effort; submission remains available without storage.
+    }
+  }
+
+  function clearRequestDraft(form, options) {
+    try { localStorage.removeItem(REQUEST_DRAFT_KEY); } catch (error) {}
+    if (form) form.reset();
+    if (!options || options.preserveDocuments !== true) clearStagedDocuments();
+    document.querySelectorAll("[data-question-prompt]").forEach(function (chip) {
+      chip.setAttribute("aria-pressed", "false");
+    });
+    updateRequestReview();
+  }
+
+  function restoreRequestDraft(form) {
+    if (!form) return;
+    try {
+      var draft = JSON.parse(localStorage.getItem(REQUEST_DRAFT_KEY) || "null");
+      if (!draft) return;
+      Object.keys(draft).forEach(function (name) {
+        var field = form.elements[name];
+        if (!field) return;
+        if (field instanceof RadioNodeList) {
+          Array.from(field).forEach(function (radio) { radio.checked = radio.value === draft[name]; });
+        } else {
+          field.value = draft[name] || "";
+        }
+      });
+      var selectedDepth = form.querySelector('input[name="analysisDepthChoice"]:checked');
+      if (selectedDepth && form.elements.analysisDepth) form.elements.analysisDepth.value = selectedDepth.value;
+      renderDocumentSelection();
+    } catch (error) {
+      // Ignore malformed or unavailable private-browser storage.
+    }
+  }
+
+  function updateRequestReview() {
+    var form = document.querySelector("[data-listing-form]");
+    if (!form) return;
+    var data = new FormData(form);
+    var home = text(data.get("listingAddress")) || text(data.get("listingUrl")) || "Add a listing link";
+    var priorities = text(data.get("listingQuestions"));
+    document.querySelectorAll("[data-review-home]").forEach(function (node) { node.textContent = home; });
+    document.querySelectorAll("[data-review-priorities]").forEach(function (node) {
+      node.textContent = priorities || "We’ll start with the listing and flag what still needs verification.";
+    });
+    var documents = loadDocumentStage();
+    document.querySelectorAll("[data-review-documents]").forEach(function (node) {
+      node.textContent = documents.length
+        ? documents.length + " private PDF" + (documents.length === 1 ? "" : "s") + " ready to upload after sign-in."
+        : "No documents added.";
+    });
   }
 
   function includesAny(haystack, needles) {
@@ -587,11 +825,18 @@
     trackFunnel("request_started", {
       decisionStage: listing.decisionStage || "considering-tour",
       depth: listing.analysisDepth || "decision-brief",
-      documentCount: 0
+      documentCount: (listing.documentStageIds || []).length + (listing.documentIds || []).length
     });
     saveState();
 
     try {
+      if (listing.documentStageIds && listing.documentStageIds.length) {
+        listing.aiStatus = "Securely uploading your documents";
+        saveState();
+      }
+      var documentIds = await uploadListingDocuments(listing);
+      listing.aiStatus = "Running server AI evaluation";
+      saveState();
       var sessionResult = await remote.client.auth.getSession();
       var token = sessionResult.data && sessionResult.data.session
         ? sessionResult.data.session.access_token
@@ -613,6 +858,7 @@
           focusQuestions: listing.questions ? [listing.questions] : [],
           decisionStage: listing.decisionStage || "considering-tour",
           analysisDepth: listing.analysisDepth || "decision-brief",
+          documentIds: documentIds,
           rubricVersion: "home-evaluation:v1"
         })
       });
@@ -839,8 +1085,11 @@
 
   function reviewListing(form) {
     var formData = new FormData(form);
-    var listing = {
-      id: "listing-" + Date.now(),
+    var existingListing = uiState.editingListingId && state.listings.find(function (item) {
+      return item.id === uiState.editingListingId;
+    });
+    var listing = Object.assign(existingListing || {}, {
+      id: existingListing ? existingListing.id : "listing-" + Date.now(),
       url: text(formData.get("listingUrl")),
       address: text(formData.get("listingAddress")),
       price: text(formData.get("listingPrice")),
@@ -848,11 +1097,15 @@
       questions: text(formData.get("listingQuestions")),
       decisionStage: text(formData.get("decisionStage")),
       analysisDepth: text(formData.get("analysisDepth")),
-      createdAt: new Date().toISOString(),
-      debriefs: []
-    };
+      documentStageIds: loadDocumentStage().map(function (item) { return item.id; }),
+      documentNames: loadDocumentStage().map(function (item) { return item.name; }),
+      documentIds: existingListing && Array.isArray(existingListing.documentIds) ? existingListing.documentIds : [],
+      createdAt: existingListing ? existingListing.createdAt : new Date().toISOString(),
+      debriefs: existingListing ? existingListing.debriefs : []
+    });
     listing.review = buildListingReview(listing);
-    state.listings.unshift(listing);
+    if (!existingListing) state.listings.unshift(listing);
+    uiState.editingListingId = null;
     uiState.activeListingId = listing.id;
     saveUiState();
     trackFunnel("listing_submitted", {
@@ -865,7 +1118,7 @@
       completeness: listing.address && listing.price ? "complete" : "partial"
     });
     saveState();
-    form.reset();
+    clearRequestDraft(form, { preserveDocuments: true });
     setActiveView("results");
     var listingSection = document.querySelector("#listings");
     if (listingSection) listingSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1666,7 +1919,7 @@
         '<span aria-hidden="true">⌂</span>',
         "<h2>No homes yet</h2>",
         "<p>Add a home to create your first buyer-specific decision packet.</p>",
-        '<button class="button coral" type="button" data-view-target="request">Analyze a home</button>',
+        '<button class="button coral" type="button" data-view-target="request" data-new-request>Analyze a home</button>',
         "</div>"
       ].join("");
       return;
@@ -1720,7 +1973,7 @@
         ].join(""),
         '<div class="decision-actions">',
         '<button class="button secondary" type="button" data-view-target="debrief" data-debrief-listing-id="' + escapeHtml(listing.id) + '">I toured this home</button>',
-        '<button class="button secondary" type="button" data-view-target="request">Compare another home</button>',
+        '<button class="button secondary" type="button" data-view-target="request" data-new-request>Compare another home</button>',
         "</div>",
         listing.debriefs.length ? reviewList("Latest debrief", [listing.debriefs[0].summary, listing.debriefs[0].nextStep]) : "",
         "</article>"
@@ -1768,6 +2021,12 @@
     } else if (listing.requestStatus === "ready" && listing.aiEvaluation) {
       button = '<span class="status-pill request-ready">Report ready</span>';
       hint = "This is the reviewed version released for you.";
+    } else if (listing.requestStatus === "needs_buyer_input") {
+      button = '<button class="button coral" type="button" data-add-request-context="' + escapeHtml(listing.id) + '">Add the missing detail</button>';
+      hint = listing.safeStatusMessage || "Add context and run the evidence check again.";
+    } else if (listing.requestStatus === "failed" && ready) {
+      button = '<button class="button coral" type="button" data-run-ai-evaluation="' + escapeHtml(listing.id) + '">Try analysis again</button>';
+      hint = listing.safeStatusMessage || "Your request is saved. You can safely try again.";
     } else if (ready) {
       button = '<button class="button coral" type="button" data-run-ai-evaluation="' + escapeHtml(listing.id) + '">' + escapeHtml(buttonLabel) + "</button>";
     } else if (endpoint && !remote.user) {
@@ -1776,7 +2035,7 @@
       button = '<button class="button secondary" type="button" disabled>' + escapeHtml(buttonLabel) + "</button>";
     }
     return [
-      '<div class="ai-action">',
+      '<div class="ai-action" role="status">',
       button,
       "<span>" + escapeHtml(hint) + "</span>",
       "</div>"
@@ -2006,6 +2265,30 @@
       }
     });
 
+    var requestForm = document.querySelector("[data-listing-form]");
+    restoreRequestDraft(requestForm);
+    updateRequestReview();
+    renderDocumentSelection();
+    var documentInput = document.querySelector("[data-document-input]");
+    if (documentInput) {
+      documentInput.addEventListener("change", function () {
+        stageDocumentFiles(documentInput.files).catch(function () {
+          window.alert("We couldn’t safely stage those documents. Your other request details are still saved.");
+          documentInput.value = "";
+        });
+      });
+    }
+    if (requestForm) {
+      requestForm.addEventListener("input", function () {
+        saveRequestDraft(requestForm);
+        updateRequestReview();
+      });
+      requestForm.addEventListener("change", function () {
+        saveRequestDraft(requestForm);
+        updateRequestReview();
+      });
+    }
+
     document.querySelector("[data-debrief-form]").addEventListener("submit", function (event) {
       event.preventDefault();
       saveDebrief(event.currentTarget);
@@ -2074,9 +2357,28 @@
       var debriefButton = event.target.closest("[data-debrief-listing-id]");
       var nextStep = event.target.closest("[data-request-next]");
       var previousStep = event.target.closest("[data-request-back]");
+      var addRequestContext = event.target.closest("[data-add-request-context]");
+      var editRequest = event.target.closest("[data-edit-request]");
       if (accept) acceptSuggestion(accept.getAttribute("data-accept-suggestion"));
       if (reject) rejectSuggestion(reject.getAttribute("data-reject-suggestion"));
       if (aiButton) requestAiEvaluation(aiButton.getAttribute("data-run-ai-evaluation"));
+      if (addRequestContext) {
+        var contextListing = state.listings.find(function (item) { return item.id === addRequestContext.getAttribute("data-add-request-context"); });
+        var contextForm = document.querySelector("[data-listing-form]");
+        if (contextListing && contextForm) {
+          uiState.editingListingId = contextListing.id;
+          saveUiState();
+          contextForm.elements.listingUrl.value = contextListing.url || "";
+          contextForm.elements.listingAddress.value = contextListing.address || "";
+          contextForm.elements.listingPrice.value = contextListing.price || "";
+          contextForm.elements.listingQuestions.value = contextListing.questions || "";
+          contextForm.elements.listingNotes.value = contextListing.notes || "";
+          saveRequestDraft(contextForm);
+          updateRequestReview();
+          setRequestStep(3, { track: false });
+          setActiveView("request", { focus: true });
+        }
+      }
       if (prepareAuth) {
         uiState.pendingAnalysisListingId = prepareAuth.getAttribute("data-prepare-auth");
         uiState.activeListingId = uiState.pendingAnalysisListingId;
@@ -2091,11 +2393,11 @@
       if (viewButton) {
         var view = viewButton.getAttribute("data-view-target") || viewButton.getAttribute("data-nav-view");
         if (view === "request") {
-          var requestForm = document.querySelector("[data-listing-form]");
-          if (requestForm) requestForm.reset();
-          document.querySelectorAll("[data-question-prompt]").forEach(function (chip) {
-            chip.setAttribute("aria-pressed", "false");
-          });
+          if (viewButton.hasAttribute("data-new-request")) {
+            uiState.editingListingId = null;
+            saveUiState();
+            clearRequestDraft(document.querySelector("[data-listing-form]"));
+          }
           setRequestStep(1, { track: false });
         }
         setActiveView(view, { focus: true });
@@ -2115,6 +2417,7 @@
           setRequestStep(uiState.requestStep - 1);
         }
       }
+      if (editRequest) setRequestStep(1);
     });
 
     var listingUrl = document.querySelector("#listingUrl");
@@ -2182,6 +2485,7 @@
     };
   }
 
+  applyProductBrand();
   setupVoice();
   bindEvents();
   render();

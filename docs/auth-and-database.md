@@ -57,11 +57,23 @@ The first AI-backed backend slice also adds:
 
 This table stores server-side Home Evaluation Skill outputs for signed-in users. See [AI Backend Setup](ai-backend.md).
 
+Private document intake adds `home_buddy_documents` plus the non-public
+`home-buddy-private-documents` Storage bucket. Browser-selected PDFs are staged
+locally until sign-in, then uploaded under an owner-prefixed path. RLS allows a
+buyer to access only their own objects and metadata; internal evaluation records
+remain withheld.
+
 ## Security
 
 The app uses the Supabase anon key in browser JavaScript, which is expected for Supabase web apps. Row Level Security is enabled so users can only read, insert, update, and delete their own workspace rows.
 
 Do not put a Supabase service-role key in `assets/config.js` or any browser-delivered file.
+
+Document uploads are limited in the current UI to three PDFs of 20 MB each. The
+storage bucket has a hard 50 MB per-object ceiling. The buyer must explicitly
+submit the request before a file is transmitted to Supabase or the configured AI
+provider. Filenames and document contents must not be included in product
+analytics.
 
 ## Sync Behavior
 
@@ -82,3 +94,7 @@ evidence. Buyers can read only:
 Migration `202607300002_request_review_release.sql` removes the earlier
 owner-read policy from the internal evaluation table. Apply it before inviting
 buyers into the reviewed-report workflow.
+
+Apply `202608020003_private_documents_and_operations.sql` before deploying the
+document-aware Edge Function. It is intentionally ordered migration-first because
+the function depends on its tables, request columns, and guarded release RPC.
