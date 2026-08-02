@@ -306,6 +306,14 @@
     };
   }
 
+  function enrichListingFromUrl(listing) {
+    if (!listing || listing.address || !listing.url) return listing;
+    var parser = window.HomeSearchListingUrl;
+    var parsed = parser && parser.parseListingUrl ? parser.parseListingUrl(listing.url) : null;
+    if (parsed && parsed.address) listing.address = parsed.address;
+    return listing;
+  }
+
   function isRemoteReady() {
     return remote.configured && remote.client && remote.user;
   }
@@ -556,6 +564,7 @@
   async function requestAiEvaluation(listingId) {
     var listing = state.listings.find(function (item) { return item.id === listingId; });
     if (!listing) return;
+    enrichListingFromUrl(listing);
 
     var config = getAiConfig();
     if (!config.endpoint) {
@@ -680,7 +689,9 @@
       } else {
         listing.aiEvaluation = null;
         listing.approvalDecision = null;
-        if (requestRow.status === "withdrawn") {
+        if (requestRow.status === "in_review" || requestRow.status === "needs_buyer_input" || requestRow.status === "failed") {
+          listing.aiStatus = requestRow.safe_status_message;
+        } else if (requestRow.status === "withdrawn") {
           listing.aiStatus = "This reviewed report is no longer available.";
         }
       }

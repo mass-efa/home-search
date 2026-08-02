@@ -3,6 +3,7 @@ import "../../../lib/approval/index.js";
 import "../../../lib/approval/validators.js";
 import "../../../lib/sources/king-county-property-identity.js";
 import "../../../lib/evidence/index.js";
+import "../../../lib/listing/listing-url.js";
 
 type RequestPayload = {
   workspaceId?: string;
@@ -136,10 +137,15 @@ function requireString(value: unknown) {
 
 function normalizeListing(value: unknown) {
   const listing = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const url = requireString(listing.url);
+  const listingUrlApi = (globalThis as Record<string, any>).HomeSearchListingUrl;
+  const parsed = listingUrlApi && listingUrlApi.parseListingUrl
+    ? listingUrlApi.parseListingUrl(url)
+    : null;
   return {
     id: requireString(listing.id),
-    url: requireString(listing.url),
-    address: requireString(listing.address),
+    url,
+    address: requireString(listing.address) || (parsed ? requireString(parsed.address) : ""),
     price: requireString(listing.price),
     notes: requireString(listing.notes),
     createdAt: requireString(listing.createdAt)
