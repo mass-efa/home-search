@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Home-Finding Buddy</title>
     <meta name="description" content="Buyer-specific research for the home you are considering—from price and records to risks, fit, and next questions.">
-    <link rel="stylesheet" href="assets/site.css?v=20260729">
+    <link rel="stylesheet" href="assets/site.css?v=20260802c">
   </head>
   <body class="app-body">
     <header class="buddy-header">
       <nav class="buddy-nav" aria-label="Primary navigation">
         <a class="buddy-brand" href="#landing" data-view-target="landing" aria-label="Home-Finding Buddy home">
           <span class="buddy-mark" aria-hidden="true">H</span>
-          <span>Home-Finding Buddy</span>
+          <span data-product-name>Homei</span>
         </a>
         <div class="buddy-nav-links">
           <button type="button" data-nav-view="landing">Home</button>
@@ -74,7 +74,7 @@
               <p class="section-kicker">Your search</p>
               <h2>Homes that need your attention</h2>
             </div>
-            <button class="button secondary" type="button" data-view-target="request">Add another home</button>
+            <button class="button secondary" type="button" data-view-target="request" data-new-request>Add another home</button>
           </div>
           <div class="dashboard-strip">
             <article><span>Next best action</span><strong data-next-action>Review a home.</strong></article>
@@ -148,11 +148,15 @@
                 <p class="step-count">Step 3 of 4</p>
                 <h1>Add anything the listing doesn’t tell us.</h1>
                 <p>Disclosures, inspections, tour notes, and agent materials can make the analysis much sharper.</p>
-                <div class="upload-zone is-coming-soon">
+                <div class="upload-zone" data-document-zone>
                   <span class="upload-icon" aria-hidden="true">↑</span>
-                  <strong>Document upload is coming next</strong>
-                  <span>For this release, paste the important excerpts below—or skip this step.</span>
+                  <strong>Add disclosure or inspection PDFs</strong>
+                  <span>Optional · Up to 3 private PDFs, 20 MB each. Selected files stay in this browser until secure upload after sign-in.</span>
+                  <label class="button secondary upload-button" for="listingDocuments">Choose PDFs</label>
+                  <input id="listingDocuments" name="listingDocuments" type="file" accept="application/pdf,.pdf" multiple data-document-input>
+                  <div class="document-selection" data-document-selection aria-live="polite">No documents selected.</div>
                 </div>
+                <p class="field-hint">By submitting, you authorize Homei to securely send these files to its AI provider for this private analysis. Uploaded documents are never included in public pages.</p>
                 <div class="field app-full">
                   <label for="listingNotes">Listing, disclosure, or tour notes <span>Optional</span></label>
                   <textarea id="listingNotes" name="listingNotes" placeholder="Paste listing details, disclosure findings, inspection notes, or your own observations."></textarea>
@@ -194,6 +198,13 @@
                   <strong>We check the claims—not just summarize the listing.</strong>
                   <p>Facts, assumptions, unknowns, and source dates are separated in every evidence-backed report.</p>
                 </div>
+                <div class="request-review-card" aria-live="polite">
+                  <span class="panel-label">Ready to analyze</span>
+                  <strong data-review-home>Add a listing link</strong>
+                  <p data-review-priorities>We’ll start with the listing and flag what still needs verification.</p>
+                  <p class="review-documents" data-review-documents>No documents added.</p>
+                  <button class="quiet-button" type="button" data-edit-request>Review details</button>
+                </div>
                 <div class="step-actions sticky-mobile">
                   <button class="button secondary" type="button" data-request-back>Back</button>
                   <button class="button coral" type="submit" data-submit-analysis>Start analysis</button>
@@ -234,14 +245,14 @@
             <h1>Decision packets</h1>
             <p>Every home stays connected to the evidence, questions, and reactions that shaped your decision.</p>
           </div>
-          <button class="button coral" type="button" data-view-target="request">Add another home</button>
+          <button class="button coral" type="button" data-view-target="request" data-new-request>Add another home</button>
         </div>
         <div class="listing-stack decision-stack" data-listing-stack>
           <div class="polished-empty">
             <span aria-hidden="true">⌂</span>
             <h2>No homes yet</h2>
             <p>Paste a listing to create your first buyer-specific decision packet.</p>
-            <button class="button coral" type="button" data-view-target="request">Analyze a home</button>
+            <button class="button coral" type="button" data-view-target="request" data-new-request>Analyze a home</button>
           </div>
         </div>
       </section>
@@ -344,13 +355,13 @@
     </main>
 
     <footer class="buddy-footer">
-      <p>Home-Finding Buddy is a research aid—not legal, inspection, appraisal, financing, or tax advice.</p>
+      <p><span data-product-name>Homei</span> is a research aid—not legal, inspection, appraisal, financing, or tax advice.</p>
       <button type="button" data-view-target="account">Privacy & account</button>
     </footer>
 
-    <script src="assets/config.js?v=20260729"></script>
+    <script src="assets/config.js?v=20260802c"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="lib/listing/listing-url.js?v=20260802"></script>
-    <script src="assets/buddy-app.js?v=20260802"></script>
+    <script src="assets/buddy-app.js?v=20260802c"></script>
   </body>
 </html>

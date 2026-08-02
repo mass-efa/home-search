@@ -448,6 +448,7 @@ textarea {
 }
 
 .app-body {
+  overflow-x: hidden;
   background: #f5f3ee;
 }
 
@@ -1725,6 +1726,7 @@ textarea {
 }
 
 .buddy-shell {
+  min-width: 0;
   min-height: calc(100vh - 76px);
 }
 
@@ -2041,6 +2043,40 @@ textarea {
   margin-top: 24px;
 }
 
+.request-review-card {
+  display: grid;
+  gap: 7px;
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid var(--buddy-border);
+  border-radius: 16px;
+  background: var(--buddy-soft);
+}
+
+.request-review-card strong {
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+}
+
+.request-review-card p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--buddy-muted);
+  font-size: 0.88rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.request-review-card .quiet-button {
+  justify-self: start;
+  margin-top: 5px;
+  padding: 0;
+  color: var(--buddy-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .app-body .field label {
   margin-bottom: 8px;
   color: var(--buddy-ink);
@@ -2143,6 +2179,39 @@ textarea {
   border-radius: 18px;
   background: var(--buddy-soft);
   text-align: center;
+}
+
+.upload-zone input[type="file"] {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.upload-button {
+  margin-top: 0.35rem;
+  cursor: pointer;
+}
+
+.upload-zone input[type="file"]:focus-visible + .document-selection,
+.upload-zone:focus-within {
+  outline: 3px solid rgba(232, 93, 70, 0.28);
+  outline-offset: 3px;
+}
+
+.document-selection {
+  width: 100%;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.document-selection ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+  text-align: left;
 }
 
 .upload-zone.is-coming-soon {
@@ -2719,6 +2788,7 @@ textarea {
 
   .entry-hero h1 {
     font-size: clamp(2.75rem, 12vw, 3.2rem);
+    overflow-wrap: anywhere;
   }
 
   .entry-lede {
@@ -2767,6 +2837,7 @@ textarea {
 
   .example-panel h2 {
     font-size: 2.25rem;
+    overflow-wrap: anywhere;
   }
 
   .flow-topbar {
@@ -2811,6 +2882,31 @@ textarea {
     border-top: 1px solid var(--buddy-border);
     background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(14px);
+  }
+
+  .request-step {
+    padding-bottom: 12px;
+  }
+
+  .choice-chips {
+    gap: 8px;
+  }
+
+  .choice-chips button {
+    min-height: 42px;
+    padding: 0 13px;
+    font-size: 0.9rem;
+  }
+
+  .decision-stack .listing-card-head,
+  .decision-stack .listing-card > *:not(.listing-card-head) {
+    margin-right: 18px;
+    margin-left: 18px;
+  }
+
+  .decision-stack .listing-card-head {
+    padding-right: 0;
+    padding-left: 0;
   }
 
   .results-header {

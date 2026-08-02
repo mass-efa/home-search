@@ -14,3 +14,5 @@ window.HOME_SEARCH_AUTH_REDIRECT_URL = window.location.origin + window.location.
 // This should point to the Supabase Edge Function deployed from
 // supabase/functions/evaluate-home. Keep OpenAI keys server-side only.
 window.HOME_SEARCH_AI_EVALUATION_ENDPOINT = "https://lqqancjtxsurfqxremcs.supabase.co/functions/v1/evaluate-home";
+window.HOME_SEARCH_PRODUCT_NAME = "Homei";
+window.HOME_SEARCH_PRODUCT_TAGLINE = "Know the home before you buy it.";

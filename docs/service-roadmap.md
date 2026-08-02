@@ -160,12 +160,43 @@ Ship V1 as a private-request service:
 
 For the buyer-facing MVP shape, see [mvp-spec.md](mvp-spec.md).
 
+## Current MVP Execution Decision
+
+Do not wait for a permanent product name or custom domain to validate the private buyer loop. Use **Homei** only as a reversible working UI name during controlled testing; retain neutral repository, database, and infrastructure names until naming and trademark review are complete.
+
+The immediate release is a controlled private cohort, not an open public launch. GitHub Pages may remain the temporary public shell, while authenticated requests, buyer notes, files, evaluations, and released results remain in private application storage.
+
+### P0: Controlled Buyer Journey
+
+Ship and verify in this order:
+
+1. Confirm one production request can travel from buyer submission through authentication, evaluation, reviewer decision, release, and buyer result without manual database repair.
+2. Preserve intake work through authentication failures, refreshes, and browser changes.
+3. Support document intake and an evidence-aware revision path without overwriting the original released result.
+4. Make the result decision-first on phone and desktop, with traceable evidence, unknowns, checked dates, and no more than three prominent next actions.
+5. Add privacy-safe funnel and failure instrumentation defined in `mvp-spec.md`.
+6. Run at least three controlled property cases, including an unparseable or incomplete listing and a case that correctly requires buyer input.
+7. Invite 3–5 real buyers with a named concierge/support owner and collect a short debrief after result open.
+
+Custom-domain authentication email is desirable before expanding the cohort, but it is not a blocker for implementation or controlled tests with provisioned recipients. If built-in email throttling interferes, preserve the request and use an explicit concierge recovery path rather than weakening authentication.
+
+### Expansion Gate
+
+Do not broaden invitations until:
+
+- No cross-user or public-data exposure is found.
+- Submission and result-open recovery work on mobile.
+- At least 80% of completed controlled-cohort results are opened.
+- Three buyers report new insight or increased confidence.
+- Operational owners can identify and resolve `needs input`, evaluation failure, reviewer backlog, and delivery failure states.
+
+After that gate, choose the smallest next investment supported by observed behavior: document revisions and follow-ups, repeat-listing history, tour debrief, or Buyer Search Brief refinement. Domain selection, permanent branding, broad SMTP delivery, payments, and public acquisition should follow demonstrated repeat value rather than precede it.
+
 ## Immediate Next Actions
 
-1. Decide whether the first public version should be:
-   - a lightweight Cloudflare Worker plus static site, or
-   - a proper full-stack app with auth and database.
-2. Choose private-by-default as the product posture.
-3. Define the first paid or free use case: one-off buyer brief for a single listing.
-4. Build the V1 request database and admin queue.
-5. Keep the current GitHub Pages site as the public demo and proof of workflow.
+1. Complete the P0 controlled buyer journey and verify it on desktop and mobile.
+2. Implement the recovery contract and privacy-safe measurement contract in `mvp-spec.md`.
+3. Test three controlled properties through automated approval and reviewer exception paths.
+4. Prepare a concierge-supported invitation and debrief for 3–5 real buyers.
+5. Keep GitHub Pages as the temporary shell and private-by-default Supabase storage as the product system of record.
+6. Select a permanent name, domain, and custom SMTP provider before expanding beyond the controlled cohort.

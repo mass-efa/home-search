@@ -215,14 +215,29 @@
     var button = form.querySelector('button[type="submit"]');
     button.disabled = true;
     button.textContent = "Releasing…";
-    var response = await client.rpc("release_home_buddy_result", {
-      p_request_id: requestId,
-      p_note: text(new FormData(form).get("note"))
-    });
+    var response;
+    try {
+      response = await Promise.race([
+        client.rpc("release_home_buddy_result", {
+          p_request_id: requestId,
+          p_note: text(new FormData(form).get("note"))
+        }),
+        new Promise(function (_resolve, reject) {
+          window.setTimeout(function () { reject(new Error("release_timeout")); }, 20000);
+        })
+      ]);
+    } catch (_error) {
+      button.disabled = false;
+      button.textContent = "Check release status";
+      window.alert("The release response took too long. Refresh the queue to verify its status before trying again.");
+      await loadQueue();
+      return;
+    }
     if (response.error) {
       button.disabled = false;
       button.textContent = "Release to buyer";
-      window.alert("This report could not be released. Recheck the evidence requirements.");
+      window.alert("This report was not released. Refresh the queue, then recheck the evidence requirements.");
+      await loadQueue();
       return;
     }
     document.querySelector("[data-review-detail]").innerHTML = '<div class="release-success"><span>✓</span><h2>Report released to the buyer.</h2><p>The immutable reviewed version is now available in their workspace.</p></div>';
