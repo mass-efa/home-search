@@ -1,10 +1,13 @@
 (function () {
-  var STORAGE_KEY = "homeFindingBuddyMvp.v1";
-  var UI_STATE_KEY = "homeFindingBuddyMvp.ui.v1";
-  var FUNNEL_KEY = "homeFindingBuddyMvp.funnel.v1";
-  var PENDING_ANALYSIS_KEY = "homeFindingBuddyMvp.pendingAnalysis.v1";
-  var REQUEST_DRAFT_KEY = "homeFindingBuddyMvp.requestDraft.v1";
-  var DOCUMENT_STAGE_KEY = "homeFindingBuddyMvp.documentStage.v1";
+  var STORAGE_KEY = "homeFindingBuddyMvp.state.v2";
+  var UI_STATE_KEY = "homeFindingBuddyMvp.ui.v2";
+  var FUNNEL_KEY = "homeFindingBuddyMvp.funnel.v2";
+  var REQUEST_DRAFT_KEY = "homeFindingBuddyMvp.requestDraft.v2";
+  var DOCUMENT_STAGE_KEY = "homeFindingBuddyMvp.documentStage.v2";
+  var PENDING_IMPORT_KEY = "homeFindingBuddyMvp.pendingImport.v2";
+  var SESSION_ANCHOR_KEY = "homeFindingBuddyMvp.sessionAnchor.v2";
+  var BUYER_AUTH_STORAGE_KEY = "homei-buyer-auth-v2";
+  var SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
   var DOCUMENT_DB_NAME = "homeFindingBuddyMvp.privateDocuments.v1";
   var DOCUMENT_STORE_NAME = "stagedDocuments";
 
@@ -23,24 +26,58 @@
     updatedAt: null
   };
 
-  var state = loadState();
+  var activeStateScope = "anonymous";
+  var state = loadState(activeStateScope);
   var remote = {
     configured: false,
     client: null,
     user: null,
     workspaceId: null,
     status: "Local only",
-    loading: false
+    loading: false,
+    session: null,
+    sessionStartedAt: null,
+    lockReason: ""
   };
   var syncTimer = null;
   var requestStatusTimer = null;
   var recognition = null;
   var activeVoiceTarget = null;
-  var uiState = loadUiState();
+  var activeVoiceTranscript = "";
+  var activeVoiceInitialValue = "";
+  var uiState = loadUiState(activeStateScope);
   var funnelSessionId = createId("session");
 
   function createId(prefix) {
     return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 9);
+  }
+
+  function storageScope(ownerId) {
+    return ownerId ? "user-" + String(ownerId).replace(/[^A-Za-z0-9-]/g, "") : "anonymous";
+  }
+
+  function scopedKey(base, scope) {
+    return base + "." + (scope || activeStateScope || "anonymous");
+  }
+
+  function newDefaultState() {
+    return structuredClone(defaultState);
+  }
+
+  function replacePrivateState(scope) {
+    activeStateScope = scope || "anonymous";
+    state = loadState(activeStateScope);
+    uiState = loadUiState(activeStateScope);
+    remote.workspaceId = null;
+  }
+
+  function anonymousDraftState() {
+    return loadState("anonymous");
+  }
+
+  function pendingAnonymousListing() {
+    var anonymousState = anonymousDraftState();
+    return anonymousState.listings && anonymousState.listings[0] ? anonymousState.listings[0] : null;
   }
 
   function applyProductBrand() {
@@ -51,9 +88,9 @@
     document.title = name;
   }
 
-  function loadUiState() {
+  function loadUiState(scope) {
     try {
-      var saved = JSON.parse(sessionStorage.getItem(UI_STATE_KEY) || "null");
+      var saved = JSON.parse(sessionStorage.getItem(scopedKey(UI_STATE_KEY, scope)) || "null");
       var ui = Object.assign({
         activeView: "",
         requestStep: 1,
@@ -62,7 +99,6 @@
         pendingAnalysisListingId: null,
         authRetryAfter: null
       }, saved || {});
-      ui.pendingAnalysisListingId = ui.pendingAnalysisListingId || localStorage.getItem(PENDING_ANALYSIS_KEY) || null;
       return ui;
     } catch (error) {
       return {
@@ -78,12 +114,7 @@
 
   function saveUiState() {
     try {
-      sessionStorage.setItem(UI_STATE_KEY, JSON.stringify(uiState));
-      if (uiState.pendingAnalysisListingId) {
-        localStorage.setItem(PENDING_ANALYSIS_KEY, uiState.pendingAnalysisListingId);
-      } else {
-        localStorage.removeItem(PENDING_ANALYSIS_KEY);
-      }
+      sessionStorage.setItem(scopedKey(UI_STATE_KEY), JSON.stringify(uiState));
     } catch (error) {
       // The product remains usable when private browsing blocks session storage.
     }
@@ -99,10 +130,11 @@
       synced: false
     };
     try {
-      var events = JSON.parse(localStorage.getItem(FUNNEL_KEY) || "[]");
+      var funnelKey = scopedKey(FUNNEL_KEY);
+      var events = JSON.parse(localStorage.getItem(funnelKey) || "[]");
       if (!Array.isArray(events)) events = [];
       events.push(event);
-      localStorage.setItem(FUNNEL_KEY, JSON.stringify(events.slice(-100)));
+      localStorage.setItem(funnelKey, JSON.stringify(events.slice(-100)));
     } catch (error) {
       // Analytics must never block a buyer task.
     }
@@ -115,7 +147,8 @@
   async function flushFunnelEvents() {
     if (!remote.client || !remote.user) return;
     try {
-      var events = JSON.parse(localStorage.getItem(FUNNEL_KEY) || "[]");
+      var funnelKey = scopedKey(FUNNEL_KEY);
+      var events = JSON.parse(localStorage.getItem(funnelKey) || "[]");
       if (!Array.isArray(events)) return;
       var unsynced = events.filter(function (event) { return !event.synced; }).slice(0, 50);
       if (!unsynced.length) return;
@@ -138,7 +171,7 @@
       events.forEach(function (event) {
         if (syncedIds.has(event.id)) event.synced = true;
       });
-      localStorage.setItem(FUNNEL_KEY, JSON.stringify(events.slice(-100)));
+      localStorage.setItem(funnelKey, JSON.stringify(events.slice(-100)));
     } catch (error) {
       // Central analytics are best-effort and never block the buyer flow.
     }
@@ -146,6 +179,10 @@
 
   function setActiveView(name, options) {
     if (!name) return;
+    if (["processing", "results", "workspace", "debrief"].indexOf(name) !== -1 && !remote.user) {
+      remote.lockReason = remote.lockReason || "Sign in to open private home research.";
+      name = "account";
+    }
     var views = document.querySelectorAll("[data-view]");
     var hasTargetView = Array.from(views).some(function (view) {
       return view.getAttribute("data-view") === name;
@@ -155,6 +192,7 @@
       if (fallbackTarget) fallbackTarget.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
+    var previousView = uiState.activeView;
     uiState.activeView = name;
     saveUiState();
 
@@ -172,6 +210,8 @@
       control.setAttribute("aria-current", active ? "page" : "false");
       control.dataset.active = active ? "true" : "false";
     });
+
+    if (previousView !== name) window.scrollTo({ top: 0, behavior: "auto" });
 
     if (!options || options.track !== false) trackFunnel("view_opened", { view: name });
     if (name === "results" && getActiveListing()) {
@@ -202,6 +242,15 @@
       node.hidden = !active;
       node.setAttribute("aria-hidden", active ? "false" : "true");
     });
+    if (!options || options.track !== false) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      var activeStep = document.querySelector('[data-request-step="' + uiState.requestStep + '"]');
+      var activeHeading = activeStep && activeStep.querySelector("h1, h2");
+      if (activeHeading) {
+        activeHeading.setAttribute("tabindex", "-1");
+        activeHeading.focus({ preventScroll: true });
+      }
+    }
     document.querySelectorAll("[data-request-progress]").forEach(function (node) {
       node.textContent = "Step " + uiState.requestStep + " of " + maxStep;
       if (node.parentElement) {
@@ -213,19 +262,19 @@
       trackFunnel("request_step_viewed", { step: uiState.requestStep, totalSteps: maxStep });
       if (uiState.requestStep === maxStep) {
         trackFunnel("request_reviewed", {
-          depthDefault: "decision-brief",
+          depthDefault: decisionStageConfig(document.querySelector("[data-decision-stage]").value).depth,
           signedIn: Boolean(remote.user)
         });
       }
     }
   }
 
-  function loadState() {
+  function loadState(scope) {
     try {
-      var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      return saved ? sanitizeLoadedState(Object.assign({}, defaultState, saved)) : structuredClone(defaultState);
+      var saved = JSON.parse(localStorage.getItem(scopedKey(STORAGE_KEY, scope)) || "null");
+      return saved ? sanitizeLoadedState(Object.assign({}, defaultState, saved)) : newDefaultState();
     } catch (error) {
-      return structuredClone(defaultState);
+      return newDefaultState();
     }
   }
 
@@ -233,6 +282,7 @@
     var sanitized = structuredClone(loadedState || defaultState);
     if (!Array.isArray(sanitized.listings)) sanitized.listings = [];
     sanitized.listings.forEach(function (listing) {
+      listing.decisionStage = normalizeDecisionStage(listing.decisionStage);
       listing.aiEvaluation = null;
       listing.aiCandidate = null;
       listing.approvalDecision = null;
@@ -243,7 +293,7 @@
 
   function saveState(options) {
     state.updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithoutReleasedPayloads()));
+    localStorage.setItem(scopedKey(STORAGE_KEY), JSON.stringify(stateWithoutReleasedPayloads()));
     render();
     if (!options || options.sync !== false) scheduleRemoteSync();
   }
@@ -277,17 +327,133 @@
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   }
 
+  function normalizeDecisionStage(stage) {
+    var value = text(stage).toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+    var legacy = {
+      considering_tour: "pre_tour",
+      researching: "pre_tour",
+      post_tour: "post_tour",
+      considering_offer: "pre_offer",
+      pre_offer: "pre_offer",
+      preparing_offer: "pre_offer",
+      active_offer: "pre_offer",
+      under_contract: "pre_offer"
+    };
+    return legacy[value] || (value === "pre_tour" ? value : "pre_tour");
+  }
+
+  function decisionStageConfig(stage) {
+    var configs = {
+      pre_tour: {
+        depth: "quick-scan",
+        maxDocuments: 2,
+        cta: "Analyze for touring",
+        question: "Is this home worth touring?",
+        recommendationSet: "Tour · Skip · Watch · Investigate",
+        title: "Tour decision scan",
+        detail: "Listing and public facts, early price context, buyer fit, schools and safety coverage, major unknowns, and a tour watchlist."
+      },
+      post_tour: {
+        depth: "decision-brief",
+        maxDocuments: 3,
+        cta: "Analyze what we learned",
+        question: "What did we learn from the tour?",
+        recommendationSet: "Revisit · Pause · Pursue · Investigate",
+        title: "Post-tour decision brief",
+        detail: "What felt better or worse, observations versus interpretations, partner alignment, unresolved questions, and any preference changes for you to confirm."
+      },
+      pre_offer: {
+        depth: "deep-decision-pack",
+        maxDocuments: 5,
+        cta: "Run pre-offer diligence",
+        question: "What should I verify, value, and protect before offering?",
+        recommendationSet: "Pursue · Pause · Investigate · Offer-prep",
+        title: "Pre-offer diligence packet",
+        detail: "Documents and page citations, closest comps, cost and hazard flags, unresolved risks, negotiation questions, and professional verification owners."
+      }
+    };
+    return configs[normalizeDecisionStage(stage)] || configs.pre_tour;
+  }
+
+  function syncDecisionStagePresentation() {
+    var select = document.querySelector("[data-decision-stage]");
+    if (!select) return;
+    var requestedStage = normalizeDecisionStage(select.value);
+    var config = decisionStageConfig(requestedStage);
+    var priorStage = select.dataset.activeStage;
+    if (priorStage && priorStage !== requestedStage && loadDocumentStage().length > config.maxDocuments) {
+      window.alert("The files already selected exceed the " + config.maxDocuments + "-file limit for that decision stage. Remove or reselect files before changing stages.");
+      select.value = priorStage;
+      requestedStage = priorStage;
+      config = decisionStageConfig(requestedStage);
+    }
+    select.dataset.activeStage = requestedStage;
+    var depth = document.querySelector("#analysisDepth");
+    var cta = document.querySelector("[data-stage-cta]");
+    var title = document.querySelector("[data-stage-scope-title]");
+    var detail = document.querySelector("[data-stage-scope-detail]");
+    var question = document.querySelector("[data-review-stage]");
+    var recommendationSet = document.querySelector("[data-review-recommendations]");
+    var fileLimit = document.querySelector("[data-document-limit]");
+    var selectedStageLabel = document.querySelector("[data-selected-stage-label]");
+    if (depth) depth.value = config.depth;
+    if (cta) cta.textContent = config.cta;
+    if (title) title.textContent = config.title;
+    if (detail) detail.textContent = config.detail;
+    if (question) question.textContent = config.question;
+    if (recommendationSet) recommendationSet.textContent = config.recommendationSet;
+    if (fileLimit) fileLimit.textContent = "Up to " + config.maxDocuments + " files for this stage · 20 MB each";
+    if (selectedStageLabel) selectedStageLabel.textContent = config.question;
+    document.querySelectorAll("[data-stage-input-panel]").forEach(function (panel) {
+      panel.hidden = panel.getAttribute("data-stage-input-panel") !== requestedStage;
+    });
+    updateStageSpecificPrompts(requestedStage);
+    updateRequestReview();
+  }
+
+  function updateStageSpecificPrompts(stage) {
+    var questionLabel = document.querySelector("[data-listing-questions-label]");
+    var questionField = document.querySelector("#listingQuestions");
+    var notesLabel = document.querySelector("[data-listing-notes-label]");
+    var notesField = document.querySelector("#listingNotes");
+    var copy = {
+      pre_tour: {
+        questionLabel: "What would make or break a tour?",
+        questionPlaceholder: "Example: Is the price supported, what might disappoint us in person, and what should we inspect during the tour?",
+        notesLabel: "Listing or agent notes",
+        notesPlaceholder: "Paste listing details, agent comments, or anything else you already know."
+      },
+      post_tour: {
+        questionLabel: "What felt better, worse, or still unresolved?",
+        questionPlaceholder: "Separate what you observed from what you inferred. Include partner agreement or disagreement and what would make you revisit, pause, or pursue.",
+        notesLabel: "Tour observations and follow-up materials",
+        notesPlaceholder: "What did you see, hear, smell, learn from the agent, or want verified? Label interpretations when you are unsure."
+      },
+      pre_offer: {
+        questionLabel: "What must be verified before you offer?",
+        questionPlaceholder: "Tell us the deadline, price concerns, documents, condition risks, negotiation questions, and any decision limits that matter.",
+        notesLabel: "Disclosure, inspection, offer, or agent notes",
+        notesPlaceholder: "Paste document findings, agent guidance, offer timing, or your own observations."
+      }
+    }[stage];
+    if (!copy) return;
+    if (questionLabel) questionLabel.textContent = copy.questionLabel;
+    if (questionField) questionField.placeholder = copy.questionPlaceholder;
+    if (notesLabel) notesLabel.firstChild.textContent = copy.notesLabel + " ";
+    if (notesField) notesField.placeholder = copy.notesPlaceholder;
+  }
+
   function loadDocumentStage() {
     try {
-      var value = JSON.parse(localStorage.getItem(DOCUMENT_STAGE_KEY) || "[]");
-      return Array.isArray(value) ? value.slice(0, 3) : [];
+      var value = JSON.parse(localStorage.getItem(scopedKey(DOCUMENT_STAGE_KEY)) || "[]");
+      return Array.isArray(value) ? value.slice(0, 10) : [];
     } catch (error) {
       return [];
     }
   }
 
   function saveDocumentStage(items) {
-    try { localStorage.setItem(DOCUMENT_STAGE_KEY, JSON.stringify(items.slice(0, 3))); } catch (error) {}
+    try { localStorage.setItem(scopedKey(DOCUMENT_STAGE_KEY), JSON.stringify(items.slice(0, 10))); } catch (error) {}
   }
 
   function openDocumentDb() {
@@ -328,14 +494,103 @@
     updateRequestReview();
   }
 
+  async function transferAnonymousDocumentsToUser() {
+    var anonymousItems = (function () {
+      try {
+        var value = JSON.parse(localStorage.getItem(scopedKey(DOCUMENT_STAGE_KEY, "anonymous")) || "[]");
+        return Array.isArray(value) ? value : [];
+      } catch (error) { return []; }
+    }());
+    if (!anonymousItems.length) return;
+    try {
+      var db = await openDocumentDb();
+      await new Promise(function (resolve, reject) {
+        var transaction = db.transaction(DOCUMENT_STORE_NAME, "readwrite");
+        var store = transaction.objectStore(DOCUMENT_STORE_NAME);
+        anonymousItems.forEach(function (item) {
+          var request = store.get(item.id);
+          request.onsuccess = function () {
+            if (!request.result || request.result.ownerScope !== "anonymous") return;
+            request.result.ownerScope = activeStateScope;
+            store.put(request.result);
+          };
+        });
+        transaction.oncomplete = resolve;
+        transaction.onerror = function () { reject(transaction.error); };
+      });
+      db.close();
+      saveDocumentStage(anonymousItems);
+      localStorage.removeItem(scopedKey(DOCUMENT_STAGE_KEY, "anonymous"));
+    } catch (error) {
+      throw new Error("Please reselect the files before continuing.");
+    }
+  }
+
+  async function importAnonymousDraft() {
+    if (!remote.user) return;
+    var draftState = anonymousDraftState();
+    if (!hasMeaningfulState(draftState)) return;
+    await transferAnonymousDocumentsToUser();
+    var draftListings = Array.isArray(draftState.listings) ? draftState.listings : [];
+    draftListings.slice().reverse().forEach(function (listing) {
+      if (!state.listings.some(function (item) { return item.id === listing.id; })) state.listings.unshift(listing);
+    });
+    if (!state.brief && draftState.brief) state.brief = draftState.brief;
+    if (!hasWorkspaceFrame() && draftState.workspace) state.workspace = draftState.workspace;
+    localStorage.removeItem(scopedKey(STORAGE_KEY, "anonymous"));
+    sessionStorage.removeItem(scopedKey(UI_STATE_KEY, "anonymous"));
+    saveState();
+    var imported = draftListings[0];
+    if (imported) {
+      uiState.activeListingId = imported.id;
+      uiState.pendingAnalysisListingId = imported.id;
+      saveUiState();
+      requestAiEvaluation(imported.id);
+    } else {
+      setActiveView("landing", { focus: true });
+    }
+  }
+
+  async function discardAnonymousDraft() {
+    var anonymousItems = (function () {
+      try { return JSON.parse(localStorage.getItem(scopedKey(DOCUMENT_STAGE_KEY, "anonymous")) || "[]"); }
+      catch (error) { return []; }
+    }());
+    if (Array.isArray(anonymousItems) && anonymousItems.length) {
+      try {
+        var db = await openDocumentDb();
+        await new Promise(function (resolve, reject) {
+          var transaction = db.transaction(DOCUMENT_STORE_NAME, "readwrite");
+          var store = transaction.objectStore(DOCUMENT_STORE_NAME);
+          anonymousItems.forEach(function (item) { store.delete(item.id); });
+          transaction.oncomplete = resolve;
+          transaction.onerror = function () { reject(transaction.error); };
+        });
+        db.close();
+      } catch (error) {}
+    }
+    localStorage.removeItem(scopedKey(DOCUMENT_STAGE_KEY, "anonymous"));
+    localStorage.removeItem(scopedKey(STORAGE_KEY, "anonymous"));
+    sessionStorage.removeItem(scopedKey(UI_STATE_KEY, "anonymous"));
+    renderAuth();
+  }
+
   async function stageDocumentFiles(fileList) {
-    var files = Array.from(fileList || []).slice(0, 3);
+    var stageSelect = document.querySelector("[data-decision-stage]");
+    var stageConfig = decisionStageConfig(stageSelect ? stageSelect.value : "pre_tour");
+    var limit = stageConfig.maxDocuments;
+    var files = Array.from(fileList || []);
     if (!files.length) return;
+    if (files.length > limit) {
+      window.alert("This " + stageConfig.title.toLowerCase() + " supports up to " + limit + " files. Choose the most relevant files, or switch stages before uploading.");
+      return;
+    }
+    var allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
     var invalid = files.find(function (file) {
-      return file.type !== "application/pdf" || file.size <= 0 || file.size > 20 * 1024 * 1024;
+      return allowedTypes.indexOf(file.type) === -1 || file.size <= 0 || file.size > 20 * 1024 * 1024;
     });
     if (invalid) {
-      window.alert("Choose PDF files no larger than 20 MB each.");
+      window.alert("Choose PDF, JPEG, PNG, or WebP files no larger than 20 MB each. Video is not supported yet.");
       return;
     }
     await clearStagedDocuments();
@@ -346,6 +601,7 @@
         type: file.type,
         size: file.size,
         blob: file,
+        ownerScope: activeStateScope,
         createdAt: new Date().toISOString()
       };
     });
@@ -390,7 +646,9 @@
       });
     }));
     db.close();
-    return records.filter(Boolean);
+    return records.filter(function (record) {
+      return record && record.ownerScope === activeStateScope;
+    });
   }
 
   function safeDocumentName(value) {
@@ -402,10 +660,11 @@
     if (!stageIds.length) return Array.isArray(listing.documentIds) ? listing.documentIds : [];
     var records = await getStagedDocumentRecords(stageIds);
     if (records.length !== stageIds.length) {
-      throw new Error("Please reselect the PDFs for this request before running the analysis.");
+      throw new Error("Please reselect the files for this request before running the analysis.");
     }
-    if ((listing.documentIds || []).length + records.length > 3) {
-      throw new Error("This request supports up to three PDFs. Start a revision after removing an earlier document.");
+    var documentLimit = decisionStageConfig(listing.decisionStage).maxDocuments;
+    if ((listing.documentIds || []).length + records.length > documentLimit) {
+      throw new Error("This request supports up to " + documentLimit + " files for the selected decision stage.");
     }
     var documentIds = Array.isArray(listing.documentIds) ? listing.documentIds.slice() : [];
     for (var i = 0; i < records.length; i += 1) {
@@ -433,16 +692,54 @@
     return documentIds;
   }
 
+  async function ensurePreferenceVersion() {
+    if (!remote.user || !remote.workspaceId || !state.brief) return null;
+    var confirmedAt = state.brief.confirmedAt || state.brief.generatedAt;
+    if (!confirmedAt || Date.now() - new Date(confirmedAt).getTime() > 30 * 86400000) return null;
+    if (state.brief.preferenceVersionId) {
+      var pinned = await remote.client
+        .from("home_buddy_preference_versions")
+        .select("id,confirmation_status,last_confirmed_at")
+        .eq("id", state.brief.preferenceVersionId)
+        .eq("workspace_id", remote.workspaceId)
+        .maybeSingle();
+      if (pinned.data && pinned.data.confirmation_status === "confirmed"
+        && Date.now() - new Date(pinned.data.last_confirmed_at).getTime() <= 30 * 86400000) {
+        return pinned.data.id;
+      }
+      state.brief.preferenceVersionId = null;
+    }
+    var created = await remote.client.rpc("create_home_buddy_preference_version", {
+      p_workspace_id: remote.workspaceId,
+      p_preferences: {
+        thesis: state.brief.thesis,
+        mustHaves: state.brief.mustHaves || [],
+        preferences: state.brief.preferences || [],
+        dealbreakers: state.brief.dealbreakers || [],
+        hiddenRisks: state.brief.hiddenRisks || [],
+        attentionRules: state.brief.attentionRules || []
+      },
+      p_source: "buyer_confirmed",
+      p_last_confirmed_at: confirmedAt
+    });
+    if (created.error || !created.data) throw new Error("Your current preferences could not be pinned to this analysis.");
+    state.brief.preferenceVersionId = created.data;
+    saveState({ sync: false });
+    return created.data;
+  }
+
   function saveRequestDraft(form) {
     if (!form) return;
     try {
       var data = new FormData(form);
-      localStorage.setItem(REQUEST_DRAFT_KEY, JSON.stringify({
+      localStorage.setItem(scopedKey(REQUEST_DRAFT_KEY), JSON.stringify({
         listingUrl: text(data.get("listingUrl")),
         listingAddress: text(data.get("listingAddress")),
         listingPrice: text(data.get("listingPrice")),
         listingQuestions: text(data.get("listingQuestions")),
         listingNotes: text(data.get("listingNotes")),
+        tourReaction: text(data.get("tourReaction")),
+        offerTiming: text(data.get("offerTiming")),
         decisionStage: text(data.get("decisionStage")),
         analysisDepthChoice: text(data.get("analysisDepthChoice"))
       }));
@@ -452,19 +749,20 @@
   }
 
   function clearRequestDraft(form, options) {
-    try { localStorage.removeItem(REQUEST_DRAFT_KEY); } catch (error) {}
+    try { localStorage.removeItem(scopedKey(REQUEST_DRAFT_KEY)); } catch (error) {}
     if (form) form.reset();
     if (!options || options.preserveDocuments !== true) clearStagedDocuments();
     document.querySelectorAll("[data-question-prompt]").forEach(function (chip) {
       chip.setAttribute("aria-pressed", "false");
     });
+    syncDecisionStagePresentation();
     updateRequestReview();
   }
 
   function restoreRequestDraft(form) {
     if (!form) return;
     try {
-      var draft = JSON.parse(localStorage.getItem(REQUEST_DRAFT_KEY) || "null");
+      var draft = JSON.parse(localStorage.getItem(scopedKey(REQUEST_DRAFT_KEY)) || "null");
       if (!draft) return;
       Object.keys(draft).forEach(function (name) {
         var field = form.elements[name];
@@ -489,16 +787,65 @@
     var data = new FormData(form);
     var home = text(data.get("listingAddress")) || text(data.get("listingUrl")) || "Add a listing link";
     var priorities = text(data.get("listingQuestions"));
+    var config = decisionStageConfig(data.get("decisionStage"));
+    var stageContext = normalizeDecisionStage(data.get("decisionStage")) === "post_tour"
+      ? text(data.get("tourReaction"))
+      : (normalizeDecisionStage(data.get("decisionStage")) === "pre_offer"
+        ? text(data.get("offerTiming"))
+        : "");
+    var priorityReview = [priorities, stageContext].filter(Boolean).join(" · ");
     document.querySelectorAll("[data-review-home]").forEach(function (node) { node.textContent = home; });
     document.querySelectorAll("[data-review-priorities]").forEach(function (node) {
-      node.textContent = priorities || "We’ll start with the listing and flag what still needs verification.";
+      node.textContent = priorityReview || "We’ll start with the listing and flag what still needs verification.";
     });
     var documents = loadDocumentStage();
     document.querySelectorAll("[data-review-documents]").forEach(function (node) {
       node.textContent = documents.length
-        ? documents.length + " private PDF" + (documents.length === 1 ? "" : "s") + " ready to upload after sign-in."
-        : "No documents added.";
+        ? documents.length + " private file" + (documents.length === 1 ? "" : "s") + " ready to upload after sign-in."
+        : "No documents or photos added.";
     });
+    var selectedTopics = Array.from(document.querySelectorAll('[data-question-prompt][aria-pressed="true"]'));
+    var priorityCount = document.querySelector("[data-review-priority-count]");
+    var prioritySummary = document.querySelector("[data-review-priority-summary]");
+    var preferenceFreshness = document.querySelector("[data-review-preference-freshness]");
+    var preferenceSummary = document.querySelector("[data-review-preference-summary]");
+    var fileCount = document.querySelector("[data-review-file-count]");
+    var fileNames = document.querySelector("[data-review-file-names]");
+    var delivery = document.querySelector("[data-review-delivery]");
+    var deliveryExpectation = document.querySelector("[data-review-delivery-expectation]");
+    if (priorityCount) priorityCount.textContent = selectedTopics.length
+      ? selectedTopics.length + " topic" + (selectedTopics.length === 1 ? "" : "s") + " selected" + (stageContext ? " · stage context added" : "")
+      : (priorityReview ? "Your specific decision context" : "No special priorities added");
+    if (prioritySummary) prioritySummary.textContent = priorityReview || "Homei will begin with the listing and public evidence.";
+    var preferenceStatus = preferenceUseStatus();
+    if (preferenceFreshness) preferenceFreshness.textContent = preferenceStatus.label;
+    if (preferenceSummary) preferenceSummary.textContent = preferenceStatus.summary;
+    if (fileCount) fileCount.textContent = documents.length
+      ? documents.length + " of " + config.maxDocuments + " files added"
+      : "No files added";
+    if (fileNames) fileNames.textContent = documents.length
+      ? documents.map(function (item) { return item.name; }).join(" · ")
+      : "Add documents or photos later if needed.";
+    if (delivery) delivery.textContent = "Automatic after evidence checks";
+    if (deliveryExpectation) deliveryExpectation.textContent = remote.user
+      ? "You can leave after starting. A passing packet appears automatically; an evidence exception asks for one specific next step."
+      : "Sign in to start. A passing packet appears automatically; an evidence exception asks for one specific next step.";
+  }
+
+  function preferenceUseStatus() {
+    if (!remote.user || !state.brief) {
+      return { label: "Not using saved preferences", summary: "Current-request priorities still guide this analysis." };
+    }
+    var confirmedAt = state.brief.confirmedAt || state.brief.generatedAt;
+    var age = confirmedAt ? Date.now() - new Date(confirmedAt).getTime() : Infinity;
+    var items = [].concat(state.brief.mustHaves || [], state.brief.preferences || [], state.brief.dealbreakers || []).slice(0, 4);
+    if (age > 30 * 86400000) {
+      return { label: "Saved preferences need confirmation", summary: "They will be excluded until you confirm them. Current-request priorities still win." };
+    }
+    return {
+      label: "Confirmed " + new Date(confirmedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      summary: items.length ? items.join(" · ") : state.brief.thesis
+    };
   }
 
   function includesAny(haystack, needles) {
@@ -553,7 +900,7 @@
   }
 
   function isRemoteReady() {
-    return remote.configured && remote.client && remote.user;
+    return remote.configured && remote.client && remote.user && !isSessionExpired(remote.session);
   }
 
   function isAiReady() {
@@ -563,6 +910,62 @@
   function setRemoteStatus(message) {
     remote.status = message;
     renderAuth();
+  }
+
+  function sessionIssuedAt(session) {
+    if (!session) return 0;
+    var issuedAt = Number(session.user && session.user.last_sign_in_at
+      ? new Date(session.user.last_sign_in_at).getTime()
+      : 0);
+    var sessionId = "";
+    if (session.access_token) {
+      try {
+        var payload = JSON.parse(atob(session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        sessionId = text(payload.session_id);
+      } catch (error) {}
+    }
+    var anchor = null;
+    try { anchor = JSON.parse(localStorage.getItem(SESSION_ANCHOR_KEY) || "null"); } catch (error) {}
+    if (anchor && anchor.sessionId === sessionId && Number(anchor.verifiedAt)) {
+      issuedAt = issuedAt ? Math.min(issuedAt, Number(anchor.verifiedAt)) : Number(anchor.verifiedAt);
+    }
+    if (issuedAt && sessionId) {
+      try {
+        localStorage.setItem(SESSION_ANCHOR_KEY, JSON.stringify({
+          sessionId: sessionId,
+          verifiedAt: issuedAt
+        }));
+      } catch (error) {}
+    }
+    return issuedAt;
+  }
+
+  function isSessionExpired(session) {
+    var issuedAt = sessionIssuedAt(session);
+    return !issuedAt || Date.now() - issuedAt >= SESSION_MAX_AGE_MS;
+  }
+
+  function scrubPrivateBrowserState(reason) {
+    clearTimeout(syncTimer);
+    if (requestStatusTimer) window.clearInterval(requestStatusTimer);
+    requestStatusTimer = null;
+    state = newDefaultState();
+    remote.user = null;
+    remote.session = null;
+    remote.sessionStartedAt = null;
+    remote.workspaceId = null;
+    remote.lockReason = reason || "For your privacy, verify it’s you to reopen private home research.";
+    replacePrivateState("anonymous");
+    setActiveView("landing", { track: false });
+    render();
+  }
+
+  async function enforceSessionFreshness(session) {
+    if (!session || !isSessionExpired(session)) return true;
+    await clearStagedDocuments();
+    if (remote.client) await remote.client.auth.signOut({ scope: "local" });
+    scrubPrivateBrowserState("For your privacy, verify it’s you to reopen private home research.");
+    return false;
   }
 
   function hasMeaningfulState(value) {
@@ -591,12 +994,26 @@
     }
 
     remote.configured = true;
-    remote.client = window.supabase.createClient(config.url, config.anonKey);
+    remote.client = window.supabase.createClient(config.url, config.anonKey, {
+      auth: {
+        storageKey: BUYER_AUTH_STORAGE_KEY,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
     setRemoteStatus("Checking session");
 
     remote.client.auth.onAuthStateChange(async function (_event, session) {
-      remote.user = session && session.user ? session.user : null;
+      if (session && !await enforceSessionFreshness(session)) return;
+      var nextUser = session && session.user ? session.user : null;
+      var nextScope = storageScope(nextUser && nextUser.id);
+      if (nextScope !== activeStateScope) replacePrivateState(nextScope);
+      remote.session = session || null;
+      remote.sessionStartedAt = sessionIssuedAt(session) || null;
+      remote.user = nextUser;
       if (remote.user) {
+        remote.lockReason = "";
         if (_event === "SIGNED_IN") trackFunnel("auth_completed", { method: "magic_link" });
         await loadRemoteWorkspace();
         await refreshRequestStatuses();
@@ -616,6 +1033,7 @@
           requestStatusTimer = null;
         }
         var justSignedOut = remote.status === "Signing out" || remote.status === "Signed out";
+        if (activeStateScope !== "anonymous") replacePrivateState("anonymous");
         remote.workspaceId = null;
         setRemoteStatus(justSignedOut ? "Signed out" : "Not signed in");
         render();
@@ -623,8 +1041,13 @@
     });
 
     var result = await remote.client.auth.getSession();
-    remote.user = result.data && result.data.session ? result.data.session.user : null;
+    var currentSession = result.data && result.data.session ? result.data.session : null;
+    if (currentSession && !await enforceSessionFreshness(currentSession)) return;
+    remote.session = currentSession;
+    remote.sessionStartedAt = sessionIssuedAt(currentSession) || null;
+    remote.user = currentSession ? currentSession.user : null;
     if (remote.user) {
+      replacePrivateState(storageScope(remote.user.id));
       await loadRemoteWorkspace();
     } else {
       setRemoteStatus("Not signed in");
@@ -676,22 +1099,15 @@
     if (!remote.client) return;
     setRemoteStatus("Signing out");
     clearTimeout(syncTimer);
+    await clearStagedDocuments();
+    try { localStorage.removeItem(SESSION_ANCHOR_KEY); } catch (error) {}
     var result = await remote.client.auth.signOut();
     if (result.error) {
       setRemoteStatus("Sign out failed: " + result.error.message);
       return;
     }
-    state.listings.forEach(function (listing) {
-      listing.aiEvaluation = null;
-      listing.aiCandidate = null;
-      listing.approvalDecision = null;
-      listing.aiModel = "";
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithoutReleasedPayloads()));
-    remote.user = null;
-    remote.workspaceId = null;
+    scrubPrivateBrowserState("Signed out. Sign in again to reopen private home research.");
     setRemoteStatus("Signed out");
-    render();
   }
 
   function scheduleRemoteSync() {
@@ -729,7 +1145,7 @@
 
     if (remoteHasData && shouldPreferRemote(remoteState, response.data.updated_at)) {
       state = sanitizeLoadedState(Object.assign({}, structuredClone(defaultState), remoteState));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithoutReleasedPayloads()));
+      localStorage.setItem(scopedKey(STORAGE_KEY), JSON.stringify(stateWithoutReleasedPayloads()));
       remote.loading = false;
       setRemoteStatus("Synced from cloud");
       render();
@@ -758,6 +1174,8 @@
       renderAuth();
       return;
     }
+
+    if (!await enforceSessionFreshness(remote.session)) return;
 
     clearTimeout(syncTimer);
     var title = state.workspace.householdName || "Home Search";
@@ -823,8 +1241,8 @@
     saveUiState();
     setActiveView("processing");
     trackFunnel("request_started", {
-      decisionStage: listing.decisionStage || "considering-tour",
-      depth: listing.analysisDepth || "decision-brief",
+      decisionStage: normalizeDecisionStage(listing.decisionStage),
+      depth: listing.analysisDepth || decisionStageConfig(listing.decisionStage).depth,
       documentCount: (listing.documentStageIds || []).length + (listing.documentIds || []).length
     });
     saveState();
@@ -834,6 +1252,7 @@
         listing.aiStatus = "Securely uploading your documents";
         saveState();
       }
+      var preferenceVersionId = await ensurePreferenceVersion();
       var documentIds = await uploadListingDocuments(listing);
       listing.aiStatus = "Running server AI evaluation";
       saveState();
@@ -852,13 +1271,13 @@
         body: JSON.stringify({
           workspaceId: remote.workspaceId,
           listing: listing,
-          brief: state.brief,
           workspace: state.workspace,
           conversationNotes: state.conversationNotes,
-          focusQuestions: listing.questions ? [listing.questions] : [],
-          decisionStage: listing.decisionStage || "considering-tour",
-          analysisDepth: listing.analysisDepth || "decision-brief",
+          focusQuestions: [listing.questions, listing.tourReaction, listing.offerTiming].filter(Boolean),
+          decisionStage: normalizeDecisionStage(listing.decisionStage),
+          analysisDepth: listing.analysisDepth || decisionStageConfig(listing.decisionStage).depth,
           documentIds: documentIds,
+          preferenceVersionId: preferenceVersionId,
           rubricVersion: "home-evaluation:v1"
         })
       });
@@ -873,21 +1292,19 @@
       listing.safeStatusMessage = data.safeStatusMessage || "";
       listing.aiModel = data.model || "";
       listing.approvalDecision = data.approvalDecision || null;
-      if (listing.approvalDecision && listing.approvalDecision.outcome === "auto_approved") {
-        listing.aiEvaluation = data.evaluation;
-        listing.aiStatus = "Evidence-checked Decision Brief approved";
-      } else {
-        listing.aiEvaluation = null;
-        listing.aiStatus = approvalStatusCopy(listing.approvalDecision);
-      }
-      trackFunnel("report_ready", {
+      listing.aiEvaluation = null;
+      listing.aiStatus = data.safeStatusMessage || (data.requestStatus === "ready"
+        ? "Decision packet ready"
+        : "Research complete. Automatic delivery is not enabled in this test environment yet.");
+      trackFunnel(data.requestStatus === "ready" ? "report_ready" : "analysis_completed", {
         requestId: listing.aiRequestId,
         evidenceStatus: listing.approvalDecision && listing.approvalDecision.outcome
           ? listing.approvalDecision.outcome
           : "missing_decision",
-        depth: listing.analysisDepth || "decision-brief"
+        depth: listing.analysisDepth || decisionStageConfig(listing.decisionStage).depth
       });
       saveState();
+      if (listing.requestStatus === "ready") await refreshRequestStatuses();
       setActiveView("results", { focus: true });
     } catch (error) {
       listing.aiStatus = "AI failed: " + (error && error.message ? error.message : "Unknown error");
@@ -899,6 +1316,7 @@
 
   async function refreshRequestStatuses() {
     if (!remote.client || !remote.user) return;
+    if (!await enforceSessionFreshness(remote.session)) return;
     var requestIds = state.listings
       .map(function (listing) { return listing.aiRequestId; })
       .filter(Boolean);
@@ -931,14 +1349,14 @@
       if (released) {
         listing.aiEvaluation = released.result_payload;
         listing.approvalDecision = released.approval_manifest;
-        listing.aiStatus = "Reviewed decision packet ready";
+        listing.aiStatus = "Decision packet ready";
       } else {
         listing.aiEvaluation = null;
         listing.approvalDecision = null;
         if (requestRow.status === "in_review" || requestRow.status === "needs_buyer_input" || requestRow.status === "failed") {
           listing.aiStatus = requestRow.safe_status_message;
         } else if (requestRow.status === "withdrawn") {
-          listing.aiStatus = "This reviewed report is no longer available.";
+          listing.aiStatus = "This report was withdrawn after a quality check and is no longer available.";
         }
       }
     });
@@ -946,20 +1364,20 @@
   }
 
   function approvalStatusCopy(decision) {
-    if (!decision) return "The server did not return an approval decision. Nothing was released.";
+    if (!decision) return "The decision packet is not available yet.";
     if (decision.outcome === "insufficient_evidence") {
-      return "Needs more evidence before a Decision Brief can be released.";
+      return "One or more evidence gaps need to be resolved before this packet can be delivered.";
     }
     if (decision.outcome === "needs_review") {
-      return "Quality exception: the evidence or analysis needs correction and another validation run.";
+      return "An evidence exception needs correction before this packet can be delivered.";
     }
     if (decision.outcome === "failed") {
-      return "Validation could not complete. No Decision Brief was released.";
+      return "The required checks could not complete. Your request remains saved.";
     }
     if (decision.outcome === "auto_approved") {
-      return "Every critical automated gate passed.";
+      return "Required evidence and quality checks passed.";
     }
-    return "Decision Brief is not available.";
+    return "The decision packet is not available yet.";
   }
 
   function splitSignals(notes) {
@@ -1014,6 +1432,7 @@
 
     state.brief = {
       generatedAt: new Date().toISOString(),
+      confirmedAt: new Date().toISOString(),
       thesis: thesis,
       mustHaves: buildMustHaves(notes),
       preferences: buildPreferences(notes),
@@ -1095,7 +1514,9 @@
       price: text(formData.get("listingPrice")),
       notes: text(formData.get("listingNotes")),
       questions: text(formData.get("listingQuestions")),
-      decisionStage: text(formData.get("decisionStage")),
+      tourReaction: text(formData.get("tourReaction")),
+      offerTiming: text(formData.get("offerTiming")),
+      decisionStage: normalizeDecisionStage(formData.get("decisionStage")),
       analysisDepth: text(formData.get("analysisDepth")),
       documentStageIds: loadDocumentStage().map(function (item) { return item.id; }),
       documentNames: loadDocumentStage().map(function (item) { return item.name; }),
@@ -1127,7 +1548,7 @@
 
   function buildListingReview(listing) {
     var brief = state.brief || {};
-    var combined = [listing.url, listing.address, listing.price, listing.notes].join(" ").toLowerCase();
+    var combined = [listing.url, listing.address, listing.price, listing.questions, listing.notes, listing.tourReaction, listing.offerTiming].join(" ").toLowerCase();
     var score = 68;
     var matches = [];
     var concerns = [];
@@ -1178,7 +1599,7 @@
 
     var review = {
       score: score,
-      recommendation: score >= 80 ? "Tour" : score >= 65 ? "Investigate" : score >= 50 ? "Watch" : "Skip",
+      recommendation: stageRecommendation(score, listing.decisionStage),
       matches: matches,
       concerns: concerns,
       diligence: diligence,
@@ -1188,22 +1609,35 @@
     return review;
   }
 
+  function stageRecommendation(score, stage) {
+    var canonicalStage = normalizeDecisionStage(stage);
+    if (canonicalStage === "post_tour") {
+      return score >= 80 ? "Pursue" : score >= 65 ? "Revisit" : score >= 50 ? "Investigate" : "Pause";
+    }
+    if (canonicalStage === "pre_offer") {
+      return score >= 80 ? "Offer-prep" : score >= 65 ? "Pursue" : score >= 50 ? "Investigate" : "Pause";
+    }
+    return score >= 80 ? "Tour" : score >= 65 ? "Investigate" : score >= 50 ? "Watch" : "Skip";
+  }
+
   function buildReviewSummary(score, listing) {
     var address = listing.address || "This listing";
-    if (score >= 80) return address + " looks worth touring if the diligence questions check out.";
-    if (score >= 65) return address + " may be worth attention, but it needs targeted investigation before a tour or offer.";
-    if (score >= 50) return address + " is a watch item unless new information improves fit or reduces risk.";
-    return address + " looks like a likely skip based on current fit/risk signals.";
+    var recommendation = stageRecommendation(score, listing.decisionStage);
+    if (normalizeDecisionStage(listing.decisionStage) === "post_tour") {
+      return recommendation + ": " + address + " should advance only if the tour reactions and unresolved questions support that next step.";
+    }
+    if (normalizeDecisionStage(listing.decisionStage) === "pre_offer") {
+      return recommendation + ": " + address + " should advance only after the remaining offer-stage evidence is resolved.";
+    }
+    return recommendation + ": " + address + " should earn tour time only if the current fit and unknowns justify the trip.";
   }
 
   function buildSkillEvaluation(listing, review) {
-    var combined = [listing.url, listing.address, listing.price, listing.notes].join(" ").toLowerCase();
-    var decisionRead = review.score >= 80 ? "Promising" :
-      review.score >= 65 ? "Needs diligence" :
-      review.score >= 50 ? "Concerning" : "Pass for now";
+    var combined = [listing.url, listing.address, listing.price, listing.questions, listing.notes, listing.tourReaction, listing.offerTiming].join(" ").toLowerCase();
+    var decisionRead = review.recommendation;
     var mainReasons = review.matches.slice(0, 3);
     var mainRisks = review.concerns.slice(0, 3);
-    var nextAction = buildSkillNextAction(review);
+    var nextAction = buildSkillNextAction(review, listing.decisionStage);
 
     if (!mainReasons.length) mainReasons.push("The home needs more facts before there is a clear reason to like it.");
     if (!mainRisks.length) mainRisks.push("The largest current risk is missing source data, not a known defect.");
@@ -1376,12 +1810,25 @@
     if (includesAny(combined, ["sewer", "drainage", "foundation", "slope", "basement"])) {
       items.push("Do inspection reports reduce or confirm the site/system risk?");
     }
-    return buildSkillSection("Open Questions And Next Actions", items, [buildSkillNextAction(review)]);
+    return buildSkillSection("Open Questions And Next Actions", items, [buildSkillNextAction(review, listing.decisionStage)]);
   }
 
-  function buildSkillNextAction(review) {
-    if (review.score >= 80) return "Tour, then request disclosures and verify the highest-risk diligence items before offer prep.";
-    if (review.score >= 65) return "Investigate first: request disclosures, inspection packet, offer timeline, and the best comparable sales.";
+  function buildSkillNextAction(review, stage) {
+    var canonicalStage = normalizeDecisionStage(stage);
+    if (canonicalStage === "post_tour") {
+      if (review.score >= 80) return "Pursue: ask the agent to resolve the highest-impact tour questions and request the relevant documents.";
+      if (review.score >= 65) return "Revisit: confirm what felt uncertain and compare partner reactions before advancing.";
+      if (review.score >= 50) return "Investigate: resolve the top observation, document, and fit gaps before another visit.";
+      return "Pause unless a material fact changes the tour read.";
+    }
+    if (canonicalStage === "pre_offer") {
+      if (review.score >= 80) return "Prepare the offer only after deadline, comps, documents, condition, and decision limits pass their checks.";
+      if (review.score >= 65) return "Pursue the remaining offer-stage diligence without treating unresolved items as cleared.";
+      if (review.score >= 50) return "Investigate the material offer risks before choosing terms or price.";
+      return "Pause offer preparation unless the material risks or value context change.";
+    }
+    if (review.score >= 80) return "Tour, using the watchlist to test the strongest fit and disappointment risks in person.";
+    if (review.score >= 65) return "Investigate the highest-impact questions before spending tour time.";
     if (review.score >= 50) return "Watch unless new facts improve fit or reduce the top risk.";
     return "Skip for now unless price, facts, or buyer priorities materially change.";
   }
@@ -1516,7 +1963,13 @@
       }
       if (finalText && activeVoiceTarget) {
         var target = document.getElementById(activeVoiceTarget);
-        target.value = (target.value ? target.value + " " : "") + finalText.trim();
+        activeVoiceTranscript = (activeVoiceTranscript ? activeVoiceTranscript + " " : "") + finalText.trim();
+        if (activeVoiceTarget === "listingQuestions") {
+          target.value = [activeVoiceInitialValue, formatStructuredVoice(activeVoiceTranscript)].filter(Boolean).join("\n\n");
+        } else {
+          target.value = [activeVoiceInitialValue, activeVoiceTranscript].filter(Boolean).join(" ");
+        }
+        renderStructuredVoice(activeVoiceTranscript);
       }
     };
 
@@ -1525,7 +1978,9 @@
     };
 
     recognition.onend = function () {
-      setVoiceStatus("Voice capture is idle.");
+      setVoiceStatus(activeVoiceTranscript
+        ? "We organized what you said. Review the editable notes before continuing."
+        : "Voice capture is idle.");
       activeVoiceTarget = null;
     };
 
@@ -1540,7 +1995,10 @@
       setVoiceStatus("Voice capture is not supported in this browser.");
       return;
     }
+    activeVoiceTranscript = "";
     activeVoiceTarget = targetId;
+    var target = document.getElementById(targetId);
+    activeVoiceInitialValue = target ? text(target.value) : "";
     recognition.start();
   }
 
@@ -1552,6 +2010,50 @@
     document.querySelectorAll("[data-voice-status]").forEach(function (node) {
       node.textContent = message;
     });
+  }
+
+  function voiceSentences(transcript) {
+    return String(transcript || "")
+      .split(/[.!?]+/)
+      .map(function (item) { return text(item); })
+      .filter(Boolean);
+  }
+
+  function structureVoiceTranscript(transcript) {
+    var buckets = { goals: [], dealbreakers: [], concerns: [], questions: [] };
+    voiceSentences(transcript).forEach(function (line) {
+      var lower = line.toLowerCase();
+      if (/[?]|wonder|question|find out|ask/.test(lower)) buckets.questions.push(line);
+      else if (/deal.?breaker|must not|cannot|won't|skip|never|absolutely need/.test(lower)) buckets.dealbreakers.push(line);
+      else if (/worry|concern|risk|noise|repair|traffic|drainage|school|safety|price/.test(lower)) buckets.concerns.push(line);
+      else buckets.goals.push(line);
+    });
+    return buckets;
+  }
+
+  function formatStructuredVoice(transcript) {
+    var buckets = structureVoiceTranscript(transcript);
+    return [
+      buckets.goals.length ? "Goals: " + buckets.goals.join("; ") : "",
+      buckets.dealbreakers.length ? "Dealbreakers: " + buckets.dealbreakers.join("; ") : "",
+      buckets.concerns.length ? "Concerns: " + buckets.concerns.join("; ") : "",
+      buckets.questions.length ? "Questions: " + buckets.questions.join("; ") : ""
+    ].filter(Boolean).join("\n");
+  }
+
+  function renderStructuredVoice(transcript) {
+    var container = document.querySelector("[data-structured-voice-output]");
+    if (!container) return;
+    var buckets = structureVoiceTranscript(transcript);
+    if (!buckets.goals.length) buckets.goals.push("No clear goal identified yet.");
+    if (!buckets.dealbreakers.length) buckets.dealbreakers.push("No explicit dealbreaker identified.");
+    if (!buckets.concerns.length) buckets.concerns.push("No explicit concern identified.");
+    if (!buckets.questions.length) buckets.questions.push("No direct question identified.");
+    Object.keys(buckets).forEach(function (key) {
+      var node = document.querySelector("[data-voice-" + key + "]");
+      if (node) node.textContent = buckets[key].join(" · ");
+    });
+    container.hidden = false;
   }
 
   function render() {
@@ -1566,6 +2068,22 @@
     renderListings();
     renderDebriefOptions();
     renderGuidedExperience();
+    renderPreferenceSnapshot();
+    syncDecisionStagePresentation();
+  }
+
+  function renderPreferenceSnapshot() {
+    var summary = document.querySelector("[data-preference-summary]");
+    var freshness = document.querySelector("[data-preference-freshness]");
+    if (!summary || !freshness) return;
+    if (!remote.user || !state.brief) {
+      summary.textContent = "Add preferences once and Homei will show the most relevant ones here.";
+      freshness.textContent = "Not confirmed yet";
+      return;
+    }
+    var status = preferenceUseStatus();
+    summary.textContent = status.summary;
+    freshness.textContent = status.label;
   }
 
   function getActiveListing() {
@@ -1586,10 +2104,10 @@
     }
     if (listing.requestStatus === "in_review") {
       return {
-        stage: "review",
-        title: "Reviewing the evidence",
-        detail: listing.safeStatusMessage || "The analysis is complete and we’re checking the evidence before sharing it.",
-        progress: 82
+        stage: "processing",
+        title: "Research complete",
+        detail: listing.safeStatusMessage || "This test environment has not enabled automatic delivery yet. Your completed request is saved.",
+        progress: 100
       };
     }
     if (listing.requestStatus === "needs_buyer_input") {
@@ -1603,7 +2121,7 @@
     if (listing.requestStatus === "ready" && listing.aiEvaluation) {
       return {
         stage: "complete",
-        title: "Your reviewed decision packet is ready",
+        title: "Your decision packet is ready",
         detail: "Open the result to review the evidence, unknowns, and next actions.",
         progress: 100
       };
@@ -1612,7 +2130,7 @@
       return {
         stage: "failed",
         title: "We couldn’t finish this report",
-        detail: listing.safeStatusMessage || "Your request is saved while we review what went wrong.",
+        detail: listing.safeStatusMessage || "Your request is saved. Resolve the stated exception, then try again.",
         progress: 100
       };
     }
@@ -1628,7 +2146,7 @@
       }
       return {
         stage: "exception",
-        title: outcome === "insufficient_evidence" ? "More evidence is needed" : "This brief needs review",
+        title: outcome === "insufficient_evidence" ? "More evidence is needed" : "An evidence exception needs attention",
         detail: approvalStatusCopy(listing.approvalDecision),
         progress: 100
       };
@@ -1660,10 +2178,10 @@
   }
 
   function renderGuidedExperience() {
-    var listing = getActiveListing();
+    var listing = remote.user ? getActiveListing() : null;
     var presentation = getAnalysisPresentation(listing);
     document.querySelectorAll("[data-returning-home]").forEach(function (node) {
-      node.hidden = !state.listings.length;
+      node.hidden = !remote.user || !state.listings.length;
     });
     document.querySelectorAll("[data-active-listing-title]").forEach(function (node) {
       node.textContent = listing ? (listing.address || listing.url || "Your home") : "Your home";
@@ -1699,19 +2217,37 @@
     var authSubmit = authForm ? authForm.querySelector('button[type="submit"]') : null;
     var syncButton = document.querySelector("[data-sync-now]");
     var signOutButton = document.querySelector("[data-sign-out]");
+    var privateNavigation = document.querySelector("[data-private-navigation]");
+    var pendingImport = document.querySelector("[data-pending-import]");
+    var pendingImportTitle = document.querySelector("[data-pending-import-title]");
 
     if (!accountState || !syncStatus || !authEmail || !authDetail) return;
 
-    accountState.textContent = remote.user ? "Signed in" : (remote.configured ? "Not signed in" : "Local only");
+    accountState.textContent = remote.user ? "Signed in" : "Sign in";
     accountState.dataset.state = remote.user ? "signed-in" : (remote.configured ? "signed-out" : "local");
     syncStatus.textContent = remote.status;
     syncStatus.dataset.state = remote.user ? "signed-in" : (remote.configured ? "signed-out" : "local");
     authEmail.textContent = remote.user && remote.user.email ? remote.user.email : "Not signed in";
     authDetail.textContent = remote.configured
       ? (remote.user
-        ? "Workspace is stored in browser storage and Supabase."
-        : (remote.status === "Signed out" ? "Signed out. This browser still keeps the local workspace." : "Sign in to sync this workspace across devices."))
+        ? "Private access lasts up to 24 hours. Sign in again after that to reopen your research."
+        : (remote.lockReason || "Sign in to save this request and open private home research."))
       : "Configure Supabase URL and anon key in assets/config.js to enable cloud sync.";
+
+    if (privateNavigation) privateNavigation.hidden = !remote.user;
+    document.querySelectorAll("[data-preference-signed-in]").forEach(function (node) {
+      node.hidden = !remote.user;
+    });
+    document.querySelectorAll("[data-preference-signed-out]").forEach(function (node) {
+      node.hidden = Boolean(remote.user);
+    });
+    if (pendingImport) {
+      var pendingListing = remote.user ? pendingAnonymousListing() : null;
+      pendingImport.hidden = !pendingListing;
+      if (pendingImportTitle && pendingListing) {
+        pendingImportTitle.textContent = pendingListing.address || pendingListing.url || "A home is ready to continue";
+      }
+    }
 
     if (authForm) authForm.hidden = Boolean(remote.user);
     if (authSubmit) {
@@ -1913,6 +2449,17 @@
 
   function renderListings() {
     var target = document.querySelector("[data-listing-stack]");
+    if (!remote.user) {
+      target.innerHTML = [
+        '<div class="polished-empty">',
+        '<span aria-hidden="true">⌂</span>',
+        "<h2>Your private reports are locked</h2>",
+        "<p>Sign in to reopen saved homes and decision packets.</p>",
+        '<button class="button coral" type="button" data-view-target="account">Sign in</button>',
+        "</div>"
+      ].join("");
+      return;
+    }
     if (!state.listings.length) {
       target.innerHTML = [
         '<div class="polished-empty">',
@@ -2016,11 +2563,11 @@
     if (listing.aiStatus) hint = listing.aiStatus;
     var button;
     if (listing.requestStatus === "in_review") {
-      button = '<span class="status-pill request-reviewing">Reviewing the evidence</span>';
-      hint = listing.safeStatusMessage || "We’ll make the reviewed report available here when it is ready.";
+      button = '<span class="status-pill request-reviewing">Research complete</span>';
+      hint = listing.safeStatusMessage || "Automatic delivery has not been enabled in this test environment yet. Your work is saved.";
     } else if (listing.requestStatus === "ready" && listing.aiEvaluation) {
       button = '<span class="status-pill request-ready">Report ready</span>';
-      hint = "This is the reviewed version released for you.";
+      hint = "Required evidence and quality checks passed. This is the current released version.";
     } else if (listing.requestStatus === "needs_buyer_input") {
       button = '<button class="button coral" type="button" data-add-request-context="' + escapeHtml(listing.id) + '">Add the missing detail</button>';
       hint = listing.safeStatusMessage || "Add context and run the evidence check again.";
@@ -2035,9 +2582,9 @@
       button = '<button class="button secondary" type="button" disabled>' + escapeHtml(buttonLabel) + "</button>";
     }
     return [
-      '<div class="ai-action" role="status">',
+      '<div class="ai-action">',
       button,
-      "<span>" + escapeHtml(hint) + "</span>",
+      '<span role="status" aria-live="polite">' + escapeHtml(hint) + "</span>",
       "</div>"
     ].join("");
   }
@@ -2047,7 +2594,7 @@
     if (!decision) return "";
     var labels = {
       auto_approved: "Evidence check complete",
-      needs_review: "Some evidence still needs review",
+      needs_review: "Evidence exception",
       insufficient_evidence: "More evidence is needed",
       failed: "We couldn’t finish the evidence check"
     };
@@ -2067,7 +2614,7 @@
       var sources = Array.isArray(evaluation.sources) ? evaluation.sources : [];
       return [
         '<div class="approved-divider"><span>Evidence-checked findings</span></div>',
-        '<section class="released-candidate" aria-label="Reviewed decision packet">',
+        '<section class="released-candidate" aria-label="Decision packet">',
         '<div class="released-sections">',
         (evaluation.sections || []).map(function (section) {
           return '<article><h3>' + escapeHtml(String(section.id || "").replaceAll("_", " ")) + '</h3><p>' + escapeHtml(section.content) + "</p></article>";
@@ -2208,7 +2755,7 @@
         trackFunnel("listing_url_entered", {
           source: includesAny(heroUrl.value, ["redfin"]) ? "redfin" : "other"
         });
-        setRequestStep(2, { track: false });
+        setRequestStep(1, { track: false });
         document.querySelectorAll("[data-request-summary-home]").forEach(function (node) {
           node.textContent = text(heroUrl.value);
         });
@@ -2228,6 +2775,15 @@
     document.querySelector("[data-sign-out]").addEventListener("click", function () {
       signOut();
     });
+
+    var importDraft = document.querySelector("[data-import-anonymous-draft]");
+    if (importDraft) importDraft.addEventListener("click", function () {
+      importAnonymousDraft().catch(function (error) {
+        setRemoteStatus(error && error.message ? error.message : "The draft could not be imported.");
+      });
+    });
+    var discardDraft = document.querySelector("[data-discard-anonymous-draft]");
+    if (discardDraft) discardDraft.addEventListener("click", function () { discardAnonymousDraft(); });
 
     document.querySelector("[data-workspace-form]").addEventListener("submit", function (event) {
       event.preventDefault();
@@ -2331,12 +2887,8 @@
       });
     });
 
-    document.querySelectorAll('input[name="analysisDepthChoice"]').forEach(function (radio) {
-      radio.addEventListener("change", function () {
-        var depth = document.querySelector("#analysisDepth");
-        if (depth && radio.checked) depth.value = radio.value;
-      });
-    });
+    var decisionStage = document.querySelector("[data-decision-stage]");
+    if (decisionStage) decisionStage.addEventListener("change", syncDecisionStagePresentation);
 
     document.querySelectorAll("[data-voice-start]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -2492,5 +3044,13 @@
   initializeGuidedExperience();
   setupSupabase().catch(function (error) {
     setRemoteStatus("Supabase setup failed: " + error.message);
+    var fallback = document.querySelector("[data-shell-fallback]");
+    if (fallback) fallback.hidden = false;
+  });
+  window.setInterval(function () {
+    if (remote.session) enforceSessionFreshness(remote.session);
+  }, 60000);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && remote.session) enforceSessionFreshness(remote.session);
   });
 }());

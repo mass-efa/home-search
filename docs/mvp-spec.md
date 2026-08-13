@@ -29,7 +29,21 @@ Optional collaborator:
 
 ## Core Product Promise
 
-Home-Finding Buddy helps buyers:
+Primary headline:
+
+> **Know what matters before you tour, offer, or walk away.**
+
+Supporting promise:
+
+> Share a listing, what you care about, and any documents you have. Homei turns them into a source-backed decision packet built around your priorities.
+
+Use **Homei** as the reversible working product name during private testing. The
+headline is the acquisition promise; “a private home-buying second brain” is the
+retention promise. Do not describe the product as knowing everything about a
+home or as replacing an agent, inspector, appraiser, lender, title professional,
+attorney, insurance professional, or tax advisor.
+
+Homei helps buyers:
 
 - Learn what they actually want.
 - Avoid wasting tours on poor-fit homes.
@@ -37,17 +51,93 @@ Home-Finding Buddy helps buyers:
 - Capture messy tour reactions through voice or text.
 - Turn each listing/tour into a sharper Buyer Search Brief.
 
+## Three Decision Stages
+
+Every request has exactly one buyer-visible stage. The stage determines the
+question, direct recommendation vocabulary, evidence freshness, output modules,
+and next action.
+
+### Pre-tour: Is this worth my time?
+
+- **Direct recommendation:** `tour`, `skip`, `watch`, or `investigate`.
+- **Core output:** fit, likely disappointment points, price context, material
+  location/property unknowns, tour checklist, and agent questions.
+- **Bounded modules:** valuation is directional; offer ceiling, personalized
+  affordability, and negotiation ladder are suppressed.
+
+### Post-tour: What did we learn?
+
+- **Direct recommendation:** `revisit`, `pause`, `pursue`, or `investigate`.
+- **Core output:** what felt better/worse, observations versus interpretations,
+  unresolved questions, partner agreement/disagreement, recommendation change,
+  and proposed preference updates.
+- **Bounded modules:** tour observations are buyer-supplied evidence, not
+  verified property facts; preference changes require confirmation.
+
+Post-tour intake must capture, with text as the P0 baseline:
+
+- Gut reaction and current decision inclination.
+- What felt better and worse than expected.
+- Buyer-observed physical facts, kept separate from interpretations.
+- Partner reactions and unresolved agreement/disagreement.
+- New concerns, questions, and evidence to request.
+- Whether the tour changed the importance of any preference.
+
+Its result must retain this structure, show the change from any pre-tour
+recommendation, and ask the buyer to accept or reject each preference change.
+
+### Pre-offer: What should I verify, value, and protect?
+
+- **Direct recommendation:** `pursue`, `pause`, `investigate`, or `offer-prep`.
+- **Core output:** deeper comps/value context, document findings, condition and
+  records risks, ownership economics when requested, and a deadline-aware
+  diligence plan.
+- **Bounded modules:** numeric offer guidance, affordability, renovation,
+  negotiation, and cost-of-waiting appear only when their decision-pack gates
+  pass. Missing evidence suppresses the conclusion, not the topic.
+
+### Migration From Previous Stages
+
+The prior values `researching`, `considering a tour`, `considering an offer`,
+`preparing an offer`, and `under contract` are no longer presented to buyers.
+Map stored requests as follows:
+
+- `researching` and `considering a tour` → `pre_tour`
+- `considering an offer` → `post_tour` when a tour/debrief exists; otherwise
+  `pre_offer`
+- `preparing an offer` and `under contract` → `pre_offer`, retaining the more
+  specific legacy state as internal context
+
+Ambiguous historical requests must ask the buyer to confirm their stage before
+generating a new version. Migration never changes an already released result.
+
 ## First-Time User Experience
 
-The default first-time flow is listing-first and progressively disclosed:
+The default intake is a four-step, listing-first flow:
 
-1. Paste a Redfin or other listing URL.
-2. Choose the decision stage: researching, considering a tour, considering an offer, preparing an offer, or under contract.
-3. Describe what matters for this decision, using suggested topics plus an open text field.
-4. Optionally add disclosures, inspection reports, tour notes, or other files.
-5. Sign in when submitting so the request and result can be saved privately.
-6. See a durable request page with clear analysis progress.
-7. Return to a decision-first result.
+1. **Home:** paste a Redfin/other listing URL or enter an address.
+2. **Decision:** choose `Pre-tour`, `Post-tour`, or `Pre-offer` and describe what
+   matters now, using suggested topics plus free text or voice-shaped text.
+3. **Evidence:** optionally add disclosures, inspection/tour reports, and photos.
+   Photos are supported now; video is explicitly later. Never imply that an
+   uploaded image establishes a professional condition finding.
+4. **Review and send:** review the saved inputs, sign in if needed, accept the
+   research-aid/privacy framing, and submit one idempotent request.
+
+After submission, show a durable request state and deliver the decision-first
+result immediately when every automated release gate passes. A routine reviewer
+wait is not part of the buyer journey.
+
+Stage media caps are exact and apply to the total files on the initial request:
+
+- `pre_tour`: 2 files.
+- `post_tour`: 3 files.
+- `pre_offer`: 5 files.
+- Every file: PDF, JPEG, PNG, or WebP; maximum 20 MB.
+
+The UI must show the applicable cap before file selection, prevent over-cap
+staging, and preserve a recoverable draft if upload fails. Video is not an
+accepted file type.
 
 The interface should preserve work before sign-in and should not ask for information that is not yet needed. Privacy, evidence limits, and the expected result should be clear at the point of submission.
 
@@ -84,7 +174,11 @@ The product asks about:
 - Dealbreakers and false positives.
 - Financial stress boundaries.
 
-The user can answer by voice or typing. Voice is especially valuable because the buyer can talk naturally with a partner.
+The user can answer by typing in P0. Voice is especially valuable because the
+buyer can talk naturally with a partner, but capture/transcription is
+experimental and P1 until consent, correction, retention, and structured
+synthesis are verified. If an experimental control remains visible during P0,
+it must be labeled accordingly and typed input remains complete.
 
 ### Generate Buyer Search Brief
 
@@ -109,6 +203,33 @@ Second-brain aha moment:
 > "This says what we want better than we could."
 
 The brief is an accelerator for repeated use, not a prerequisite for the first listing review.
+
+### Preference Freshness
+
+Every preference stores importance, source, confidence, scope, household
+agreement state, created date, last-confirmed date, and superseded value when it
+changes. Request-specific priorities govern that request.
+
+- Ask “Still right?” only for material preferences that are older than 30 days,
+  conflict with the current request, follow three tours, or follow a material
+  budget/location/timeline change.
+- Tour- or model-derived changes remain suggestions until accepted.
+- Stale preferences may inform a question but may not silently control a
+  high-impact recommendation.
+- Every buyer-fit judgment must link to the active preference version that
+  supports it.
+
+“Confirmed” is an explicit buyer action, never inferred from generation,
+submission, authentication, or passive display. When confirmation is required,
+the buyer may confirm/edit the material preference or exclude it from this
+analysis. The request cannot relabel an old version as buyer-confirmed.
+
+Precedence is authoritative:
+
+1. Current-request priority or correction.
+2. Explicitly confirmed active preference version.
+3. Older preference as question context only.
+4. Model- or tour-inferred preference as an unconfirmed suggestion only.
 
 ## Activation Funnel
 
@@ -272,6 +393,18 @@ Output:
 - Profile updates suggested.
 - Recommendation: skip, watch, revisit, pursue, or offer-prep.
 
+Voice synthesis must retain the original transcript, speaker and confidence
+information when available, notable exact statements, and a buyer-editable
+structured summary. The summary separates reactions, physical observations,
+interpretations, unresolved questions, partner agreement/disagreement,
+preference suggestions, and recommendation implications. “I saw moisture” may
+not become “the home has a moisture problem.” Material preference, budget, or
+recommendation changes require buyer confirmation.
+
+P0 accepts typed or pasted debriefs using this structure. Audio capture and
+transcription are P1. Video intake and analysis are P2; the P0 UI must not
+promise video support.
+
 Third aha moment:
 
 > "It learned from our reaction and made the next review sharper."
@@ -302,6 +435,27 @@ Must support:
 - Progressive disclosure and saved in-progress answers.
 - Sign-in at submission rather than before value is clear.
 - Clear privacy and research-aid framing.
+- The four visible steps are `Home`, `Decision`, `Evidence`, and `Review and
+  send`; authentication is part of the final step, not a fifth conceptual task.
+- Photo upload with per-file state and removal before submission.
+- Clear “Video support is coming later” copy wherever video could reasonably be
+  expected.
+
+Step 4 must visibly reconcile:
+
+- Home identity and listing URL.
+- Exactly one canonical stage: `pre_tour`, `post_tour`, or `pre_offer`.
+- The stage-specific direct recommendation set and expected output.
+- Current-request priorities and the saved preference version/status being used.
+- Selected filenames, file count, allowed cap, and optional notes.
+- Included research modules and conclusions that are explicitly suppressed.
+- Private-by-default, research-aid, file-processing, and professional-boundary
+  notices.
+- One final stage-specific submit action.
+
+The buyer must be able to edit each input category without losing other work.
+The review states that the request is saved, passing results release immediately
+after automated checks, and an exception may instead ask for one specific input.
 
 ### Request Status
 
@@ -318,6 +472,16 @@ Shows human-readable progress such as:
 The user should know that the request succeeded, what happens next, and how they will learn that it is ready.
 
 Do not imply continuously changing progress when the system only knows a durable state. Prefer honest state labels with an updated time and expected next step. A request that needs buyer input must explain exactly what is missing and provide a direct way to supply it.
+
+The canonical happy path is:
+
+`Request received` → `Researching` → `Decision packet ready`
+
+There is no buyer-visible routine review step, approval state, or invented
+percentage. `We’re resolving an evidence issue` appears only after a gate or the
+independent evaluator creates an exception. Internal terms including
+`auto_approved`, validator, evaluator, approval, and review queue are never the
+primary buyer message.
 
 ### Listing Result
 
@@ -430,6 +594,37 @@ Acceptance criteria:
 - Result sections use meaningful headings and native disclosure controls where collapse improves scanning.
 - Text remains the complete fallback when voice capture is unavailable or inappropriate.
 
+## Schools And Safety Evidence Contract
+
+Schools and safety are active research modules for every stage, not generic
+boilerplate. Their depth is proportional to the decision stage and buyer
+priority, but every released pack either provides compliant coverage or names
+the gap and verification action.
+
+**Schools:** distinguish official current assignment, boundary/change risk,
+publicly reported school facts, and secondary ratings. Official district or
+boundary evidence with a checked date is required to state assignment;
+otherwise assignment is unknown. Ratings may be secondary context only. Never
+label a school “good” or “bad,” guarantee future assignment, or use school data
+as a proxy for neighborhood demographics.
+
+**Safety:** identify the official/local dataset, incident period, geography,
+category definitions, relationship to the property, checked date, and reporting
+limitations. Do not convert reputation, anecdotes, or third-party grades into a
+safety conclusion. Avoid “safe” and “unsafe”; report observable patterns,
+comparison boundaries, uncertainty, and a buyer-verifiable next action.
+
+Acceptance criteria:
+
+- Every displayed assignment and safety statistic has claim-level sourcing and
+  a checked date.
+- An unavailable official lookup becomes an explicit coverage gap, never a
+  reassuring inference.
+- Pre-offer evidence meets the stricter freshness and geography requirements in
+  the Decision Pack Contract.
+- The direct recommendation cannot depend on a school or safety assertion that
+  failed its evidence gate.
+
 ## Implemented Static MVP
 
 The first usable slice now lives at:
@@ -442,7 +637,8 @@ It is intentionally local-first and dependency-free:
 - Supports optional Supabase email magic-link auth and Postgres workspace sync.
 - Generates a Buyer Search Brief from conversation notes.
 - Reviews pasted listings against the brief with transparent fit/risk heuristics.
-- Captures tour debriefs with text or browser voice capture where supported.
+- Captures tour debriefs with text and includes experimental browser voice
+  capture where supported; voice output is not a release-grade synthesis yet.
 - Suggests Buyer Search Brief updates after debriefs.
 - Runs on GitHub Pages or any static web server.
 
@@ -584,7 +780,11 @@ Build and validate:
 6. Decision-summary-first result page.
 7. Sources, checked dates, evidence limits, and next actions.
 8. Funnel instrumentation from URL entry through result open.
-9. Internal review or exception handling needed to deliver trustworthy results.
+9. Internal exception handling and asynchronous audit needed to maintain
+   trustworthy results.
+10. Immediate private delivery when all deterministic gates and the independent
+    evaluator pass; human review is reserved for exceptions and asynchronous
+    audit.
 
 P0 acceptance order:
 
@@ -595,7 +795,25 @@ P0 acceptance order:
 5. **Measurement:** the required funnel and failure events can be inspected for a controlled tester without collecting sensitive content.
 6. **Cohort readiness:** tester invitation, support owner, concierge fallback, and qualitative debrief are prepared before the first external invitation.
 
-P1 begins only after the P0 journey works reliably. It includes document-driven revisions, follow-up questions, stronger buyer-home history, and text tour debrief. Voice capture, comparison, sharing, and profile learning remain later unless user testing shows they are blocking repeat use.
+P1 begins only after the P0 journey works reliably. It includes document-driven
+revisions, follow-up questions, stronger buyer-home history, and audio capture
+and transcription for the structured debrief. Comparison, sharing, and broader
+profile learning remain later unless user testing shows they are blocking repeat
+use.
+
+Three-stage acceptance criteria:
+
+- A buyer sees only the three current stages and receives stage-appropriate
+  direct recommendation language.
+- One fixture per stage demonstrates the required core output and suppression of
+  out-of-scope conditional modules.
+- A gate-passing candidate reaches the buyer without a routine reviewer action.
+- A failed or uncertain gate remains private, maps to a useful buyer status, and
+  creates an exception action.
+- Photos can be attached without implying visual inspection; video is not
+  accepted or promised.
+- Preference freshness, schools, and safety rules are represented in release
+  fixtures and cannot be bypassed by recommendation prose.
 
 ### Later Retention Work: The Buyer Second Brain
 

@@ -3,35 +3,44 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Home-Finding Buddy</title>
-    <meta name="description" content="Buyer-specific research for the home you are considering—from price and records to risks, fit, and next questions.">
-    <link rel="stylesheet" href="assets/site.css?v=20260802c">
+    <title>Homei — Research your biggest investment</title>
+    <meta name="description" content="Buyer-specific diligence for touring, investigating, and offering on a home with confidence.">
+    <link rel="stylesheet" href="assets/site.css?v=20260813c">
   </head>
   <body class="app-body">
     <header class="buddy-header">
       <nav class="buddy-nav" aria-label="Primary navigation">
-        <a class="buddy-brand" href="#landing" data-view-target="landing" aria-label="Home-Finding Buddy home">
+        <a class="buddy-brand" href="#landing" data-view-target="landing" aria-label="Homei home">
           <span class="buddy-mark" aria-hidden="true">H</span>
           <span data-product-name>Homei</span>
         </a>
-        <div class="buddy-nav-links">
-          <button type="button" data-nav-view="landing">Home</button>
-          <button type="button" data-nav-view="results">Saved homes <span class="nav-count" data-listing-count>0</span></button>
-          <button type="button" data-nav-view="workspace">Your preferences</button>
+        <div class="buddy-nav-links" data-private-navigation hidden>
+          <button class="desktop-nav-item" type="button" data-nav-view="landing">Home</button>
+          <button class="desktop-nav-item" type="button" data-nav-view="results">Homes <span class="nav-count" data-listing-count>0</span></button>
+          <button class="desktop-nav-item" type="button" data-nav-view="workspace">Preferences</button>
+          <button class="mobile-nav-item" type="button" data-nav-view="results"><span aria-hidden="true">⌂</span><span>Homes</span></button>
+          <button class="mobile-nav-item mobile-add-action" type="button" data-view-target="request" data-new-request><span aria-hidden="true">＋</span><span>Add</span></button>
+          <button class="mobile-nav-item" type="button" data-nav-view="account"><span aria-hidden="true">●</span><span>Profile</span></button>
         </div>
-        <button class="account-trigger" type="button" data-nav-view="account" aria-label="Open account">
+        <a class="example-nav-link" href="homes/3920-w-barrett-st-seattle-wa-98199.html">Example report</a>
+        <button class="account-trigger" type="button" data-nav-view="account" aria-label="Sign in or open account">
           <span aria-hidden="true">⌂</span>
-          <span data-account-state>Local only</span>
+          <span data-account-state>Sign in</span>
         </button>
       </nav>
     </header>
 
     <main class="buddy-shell">
       <section class="buddy-view is-active" id="landing" data-view="landing">
+        <div class="shell-fallback" role="alert" aria-labelledby="shell-fallback-title" hidden data-shell-fallback>
+          <strong id="shell-fallback-title">Homei couldn’t load your workspace.</strong>
+          <span>Your local draft is still safe.</span>
+          <a class="button secondary" href="app.html">Try again</a>
+        </div>
         <div class="entry-hero">
-          <p class="eyebrow">Decision support for homebuyers</p>
-          <h1>Understand a home<br>before you commit.</h1>
-          <p class="entry-lede">Paste a listing and get a buyer-specific analysis of price, risks, public records, and fit.</p>
+          <p class="eyebrow">Independent decision support for homebuyers</p>
+          <h1>A home may be your biggest investment. Research it like one.</h1>
+          <p class="entry-lede">Buyer-specific diligence for touring, investigating, and offering with confidence.</p>
 
           <form class="listing-entry" data-url-entry>
             <label for="heroListingUrl">Listing link</label>
@@ -43,7 +52,7 @@
             <p class="field-hint">You can add priorities and documents before the analysis begins.</p>
           </form>
 
-          <div class="trust-row" aria-label="Why buyers use Home-Finding Buddy">
+          <div class="trust-row" aria-label="Why buyers use Homei">
             <span><i aria-hidden="true">✓</i> Private by default</span>
             <span><i aria-hidden="true">✓</i> Sources and unknowns labeled</span>
             <span><i aria-hidden="true">✓</i> No agent leads or sales calls</span>
@@ -113,6 +122,30 @@
                   <label for="listingPrice">Price or status <span>Optional</span></label>
                   <input id="listingPrice" name="listingPrice" type="text" placeholder="$1,250,000 · Active">
                 </div>
+                <div class="field app-full">
+                  <label for="decisionStage">Where are you in the decision?</label>
+                  <select id="decisionStage" name="decisionStage" data-decision-stage>
+                    <option value="pre_tour">Should I tour this home?</option>
+                    <option value="post_tour">I toured it—what did we learn?</option>
+                    <option value="pre_offer">I’m preparing an offer</option>
+                  </select>
+                </div>
+                <div class="stage-input-panels" data-stage-input-panels>
+                  <section class="stage-input-panel" data-stage-input-panel="pre_tour">
+                    <span class="panel-label">Helpful for a tour decision</span>
+                    <p>Tell us what would make the trip worthwhile and any immediate reasons you might skip it.</p>
+                  </section>
+                  <section class="stage-input-panel" data-stage-input-panel="post_tour" hidden>
+                    <span class="panel-label">Helpful after a tour</span>
+                    <label for="tourReaction">What changed when you saw it?</label>
+                    <textarea id="tourReaction" name="tourReaction" placeholder="What felt better or worse than the listing suggested?"></textarea>
+                  </section>
+                  <section class="stage-input-panel" data-stage-input-panel="pre_offer" hidden>
+                    <span class="panel-label">Helpful before an offer</span>
+                    <label for="offerTiming">Offer timing or deadline <span>Optional</span></label>
+                    <input id="offerTiming" name="offerTiming" type="text" placeholder="Example: Offers reviewed Tuesday at 5 PM">
+                  </section>
+                </div>
                 <button class="button coral step-continue" type="button" data-request-next>Continue</button>
               </section>
 
@@ -120,6 +153,23 @@
                 <p class="step-count">Step 2 of 4</p>
                 <h1>What would make or break this home for you?</h1>
                 <p>Choose anything important, then tell us what’s specific to your decision.</p>
+                <section class="preference-snapshot" aria-labelledby="preference-snapshot-title" data-preference-snapshot>
+                  <div data-preference-signed-in hidden>
+                    <span class="panel-label">Your saved preferences</span>
+                    <strong id="preference-snapshot-title">Use what Homei already knows</strong>
+                    <p data-preference-summary>Add preferences once and Homei will show the most relevant ones here.</p>
+                  </div>
+                  <div class="preference-freshness" data-preference-signed-in hidden>
+                    <span data-preference-freshness>Not confirmed yet</span>
+                    <button class="quiet-button" type="button" data-view-target="workspace">Confirm or edit</button>
+                  </div>
+                  <div class="preference-signed-out" data-preference-signed-out>
+                    <span class="panel-label">Optional</span>
+                    <strong>Make this analysis more personal</strong>
+                    <p>Sign in to reuse saved preferences—or continue without them.</p>
+                    <button class="quiet-button" type="button" data-view-target="account" data-auth-return="request">Sign in to use preferences</button>
+                  </div>
+                </section>
                 <div class="choice-chips" data-priority-chips>
                   <button type="button" data-question-prompt="Price and comparable sales">Price & comps</button>
                   <button type="button" data-question-prompt="Condition and near-term repairs">Condition</button>
@@ -130,14 +180,23 @@
                   <button type="button" data-question-prompt="Future resale and appreciation">Resale</button>
                 </div>
                 <div class="field app-full">
-                  <label for="listingQuestions">What should we especially investigate?</label>
+                  <label for="listingQuestions" data-listing-questions-label>What should we especially investigate?</label>
                   <textarea id="listingQuestions" name="listingQuestions" placeholder="Example: We love the layout but worry about traffic noise, drainage, and whether the price is supported."></textarea>
                 </div>
                 <div class="voice-actions">
-                  <button class="button secondary" type="button" data-voice-start="listingQuestions">Speak instead</button>
+                  <button class="button secondary" type="button" data-voice-start="listingQuestions">Try experimental voice notes</button>
                   <button class="button secondary" type="button" data-voice-stop>Stop</button>
                   <span class="voice-status" data-voice-status>Voice is ready.</span>
                 </div>
+                <section class="structured-voice-output" data-structured-voice-output hidden aria-live="polite" aria-label="Structured notes from your recording">
+                  <div class="structured-voice-heading"><strong>Draft structured notes</strong><span>Experimental · edit and confirm before continuing</span></div>
+                  <div class="structured-voice-grid">
+                    <article><span>Goals</span><p data-voice-goals></p></article>
+                    <article><span>Dealbreakers</span><p data-voice-dealbreakers></p></article>
+                    <article><span>Concerns</span><p data-voice-concerns></p></article>
+                    <article><span>Questions</span><p data-voice-questions></p></article>
+                  </div>
+                </section>
                 <div class="step-actions">
                   <button class="button secondary" type="button" data-request-back>Back</button>
                   <button class="button coral" type="button" data-request-next>Continue</button>
@@ -146,19 +205,20 @@
 
               <section class="request-step" data-request-step="3" hidden>
                 <p class="step-count">Step 3 of 4</p>
-                <h1>Add anything the listing doesn’t tell us.</h1>
-                <p>Disclosures, inspections, tour notes, and agent materials can make the analysis much sharper.</p>
+                <h1>Add anything you’ve found about this home.</h1>
+                <p>Documents, photos, tour observations, and agent materials can make the analysis sharper. You can always add more later.</p>
                 <div class="upload-zone" data-document-zone>
                   <span class="upload-icon" aria-hidden="true">↑</span>
-                  <strong>Add disclosure or inspection PDFs</strong>
-                  <span>Optional · Up to 3 private PDFs, 20 MB each. Selected files stay in this browser until secure upload after sign-in.</span>
-                  <label class="button secondary upload-button" for="listingDocuments">Choose PDFs</label>
-                  <input id="listingDocuments" name="listingDocuments" type="file" accept="application/pdf,.pdf" multiple data-document-input>
-                  <div class="document-selection" data-document-selection aria-live="polite">No documents selected.</div>
+                  <strong>Add documents or photos</strong>
+                  <span>Optional · Add disclosures, inspections, tour photos, comparable sales, or screenshots.</span>
+                  <span data-document-limit>Up to 2 files for this stage · 20 MB each</span>
+                  <label class="button secondary upload-button" for="listingDocuments">Choose files or photos</label>
+                  <input id="listingDocuments" name="listingDocuments" type="file" accept="application/pdf,.pdf,image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple data-document-input aria-describedby="document-consent">
+                  <div class="document-selection" data-document-selection aria-live="polite">No files selected.</div>
                 </div>
-                <p class="field-hint">By submitting, you authorize Homei to securely send these files to its AI provider for this private analysis. Uploaded documents are never included in public pages.</p>
+                <p class="field-hint" id="document-consent">By submitting, you authorize Homei to securely process these private files with its AI provider for this analysis. They are never included in public pages. PDF, JPG, PNG, or WebP only; video is planned for later.</p>
                 <div class="field app-full">
-                  <label for="listingNotes">Listing, disclosure, or tour notes <span>Optional</span></label>
+                  <label for="listingNotes" data-listing-notes-label>Listing, disclosure, or tour notes <span>Optional</span></label>
                   <textarea id="listingNotes" name="listingNotes" placeholder="Paste listing details, disclosure findings, inspection notes, or your own observations."></textarea>
                 </div>
                 <div class="step-actions">
@@ -169,28 +229,27 @@
 
               <section class="request-step" data-request-step="4" hidden>
                 <p class="step-count">Step 4 of 4</p>
-                <h1>Choose the right level of diligence.</h1>
-                <p>You can update the request later if new information arrives.</p>
-                <div class="field app-full">
-                  <label for="decisionStage">What are you deciding?</label>
-                  <select id="decisionStage" name="decisionStage">
-                    <option value="considering-tour">Is it worth touring?</option>
-                    <option value="pre-offer">Should I consider an offer?</option>
-                    <option value="active-offer">I’m preparing an offer</option>
-                    <option value="under-contract">I’m already under contract</option>
-                  </select>
+                <h1>Review your private request.</h1>
+                <p>Confirm the home, decision, priorities, evidence, and bounded research scope before the analysis begins.</p>
+                <div class="selected-stage-confirmation" data-selected-stage-confirmation>
+                  <span class="panel-label">Your decision</span>
+                  <strong data-selected-stage-label>Should I tour this home?</strong>
+                  <small data-review-recommendations>Tour · Skip · Watch · Investigate</small>
+                  <button class="quiet-button" type="button" data-edit-stage data-edit-request>Edit decision</button>
                 </div>
-                <div class="depth-options">
-                  <label>
-                    <input type="radio" name="analysisDepthChoice" value="decision-brief" checked>
-                    <span><strong>Decision brief</strong><small>A focused initial read for deciding whether to tour or investigate.</small></span>
-                  </label>
-                  <label>
-                    <input type="radio" name="analysisDepthChoice" value="deep-decision-pack">
-                    <span><strong>Deep decision packet</strong><small>More complete diligence for a serious purchase decision.</small></span>
-                  </label>
+                <div class="request-confirmation-grid">
+                  <section><span class="panel-label">Priorities</span><strong data-review-priority-count>No special priorities added</strong><p data-review-priority-summary>Homei will begin with the listing and public evidence.</p></section>
+                  <section><span class="panel-label">Preferences</span><strong data-review-preference-freshness>Not using saved preferences</strong><p data-review-preference-summary>You can continue without a saved buyer profile.</p></section>
+                  <section><span class="panel-label">Files</span><strong data-review-file-count>No files added</strong><p data-review-file-names>Add documents or photos later if needed.</p></section>
+                  <section><span class="panel-label">Delivery</span><strong data-review-delivery>Automatic after evidence checks</strong><p data-review-delivery-expectation>A passing packet appears automatically; an evidence exception asks for one specific next step.</p></section>
+                </div>
+                <div class="stage-scope-summary" data-stage-scope-summary>
+                  <span class="panel-label">Bounded research scope</span>
+                  <strong data-stage-scope-title>Tour decision scan</strong>
+                  <p data-stage-scope-detail>Listing and public facts, early price context, buyer fit, schools and safety coverage, major unknowns, and a tour watchlist.</p>
                 </div>
                 <select id="analysisDepth" name="analysisDepth" class="visually-hidden" tabindex="-1" aria-hidden="true">
+                  <option value="quick-scan">Quick Scan</option>
                   <option value="decision-brief">Decision Brief</option>
                   <option value="deep-decision-pack">Deep Decision Pack</option>
                 </select>
@@ -207,7 +266,7 @@
                 </div>
                 <div class="step-actions sticky-mobile">
                   <button class="button secondary" type="button" data-request-back>Back</button>
-                  <button class="button coral" type="submit" data-submit-analysis>Start analysis</button>
+                  <button class="button coral stage-aware-cta" type="submit" data-submit-analysis data-stage-cta data-tour-label="Analyze for touring" data-investigate-label="Build agent investigation brief" data-offer-label="Run pre-offer diligence">Analyze for touring</button>
                 </div>
               </section>
             </form>
@@ -216,7 +275,7 @@
             <span class="panel-label">Your private request</span>
             <strong data-request-summary-home>Paste a listing to begin</strong>
             <p data-request-summary-priorities>We’ll tailor the research to your specific questions.</p>
-            <div class="privacy-note"><span aria-hidden="true">⌾</span><p><strong>Private by default</strong>Your notes and decision limits are never published.</p></div>
+            <div class="privacy-note"><span aria-hidden="true">⌾</span><p><strong>Private by default</strong><span>Your notes and decision limits are never published.</span></p></div>
           </aside>
         </div>
       </section>
@@ -348,6 +407,15 @@
                 <button class="button secondary" type="button" data-sign-out>Sign out</button>
               </div>
             </div>
+            <div class="auth-card pending-import" data-pending-import hidden>
+              <span>Unsent browser draft</span>
+              <strong data-pending-import-title>A home is ready to continue</strong>
+              <p>This draft was created before you signed in. Importing it is optional and adds it only to this account.</p>
+              <div class="hero-actions compact-actions">
+                <button class="button coral" type="button" data-import-anonymous-draft>Import and continue</button>
+                <button class="button secondary" type="button" data-discard-anonymous-draft>Discard draft</button>
+              </div>
+            </div>
             <p class="backend-note" data-ai-backend-state>Sign in to request an evidence-backed analysis.</p>
           </section>
         </div>
@@ -362,6 +430,6 @@
     <script src="assets/config.js?v=20260802c"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="lib/listing/listing-url.js?v=20260802"></script>
-    <script src="assets/buddy-app.js?v=20260802c"></script>
+    <script src="assets/buddy-app.js?v=20260813d"></script>
   </body>
 </html>

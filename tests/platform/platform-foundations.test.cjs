@@ -14,6 +14,9 @@ const evaluator = fs.readFileSync(path.join(
   root,
   "supabase/functions/evaluate-home/index.ts"
 ), "utf8");
+const contractMigration = fs.readFileSync(path.join(
+  root, "supabase/migrations/202608130005_p0_contract_and_read_auth.sql"
+), "utf8");
 const app = fs.readFileSync(path.join(root, "app.html"), "utf8");
 const buyerApp = fs.readFileSync(path.join(root, "assets/buddy-app.js"), "utf8");
 
@@ -40,22 +43,24 @@ test("automatic release is service-only and the evaluator degrades to review", (
 test("document objects are private, owner-prefixed, and size/type bounded", () => {
   assert.match(migration, /'home-buddy-private-documents', 'home-buddy-private-documents', false/);
   assert.match(migration, /storage_path like owner_id::text \|\| '\/%'/);
-  assert.match(migration, /byte_size <= 52428800/);
+  assert.match(contractMigration, /byte_size <= 20971520/);
+  assert.match(contractMigration, /file_size_limit = 20971520/);
   assert.match(migration, /application\/pdf/);
   assert.doesNotMatch(migration, /public\s*=\s*true/);
 });
 
-test("buyer PDF staging survives sign-in navigation and uploads only to the private bucket", () => {
-  assert.match(app, /accept="application\/pdf,\.pdf"/);
+test("buyer private-media staging survives sign-in navigation and uploads only to the private bucket", () => {
+  assert.match(app, /accept="[^"]*application\/pdf[^"]*image\/jpeg[^"]*image\/png/);
   assert.match(buyerApp, /indexedDB\.open\(DOCUMENT_DB_NAME/);
   assert.match(buyerApp, /from\("home-buddy-private-documents"\)/);
   assert.match(buyerApp, /documentIds: documentIds/);
 });
 
-test("the evaluator resolves only owner-readable PDFs and supplies them as file inputs", () => {
+test("the evaluator resolves only owner-readable private media and uses MIME-specific model inputs", () => {
   assert.match(evaluator, /\.from\("home_buddy_documents"\)/);
-  assert.match(evaluator, /\.eq\("media_type", "application\/pdf"\)/);
+  assert.match(evaluator, /\.in\("media_type", \["application\/pdf", "image\/jpeg", "image\/png", "image\/webp"\]\)/);
   assert.match(evaluator, /type: "input_file"/);
+  assert.match(evaluator, /type: "input_image"/);
   assert.match(evaluator, /trustBoundary: "untrusted_buyer_upload"/);
 });
 
