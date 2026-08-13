@@ -13,6 +13,9 @@ validation remains in progress; external invitations are not authorized.
 
 ## Production deployment
 
+- GitHub Pages merge commit: `3bff2a0d5a5bd986e3cfbf010865a2e2118eb5c5`
+- GitHub Pages build: `1149722023`, status `built`
+- Production page: `https://mass-efa.github.io/home-search/app.html`
 - Supabase project ref: `lqqancjtxsurfqxremcs`
 - Edge Function: `evaluate-home`
 - Function ID: `4c37b13b-0fad-4af5-85a9-d757aa9bc8c0`
@@ -94,13 +97,19 @@ These are the local source hashes used by production version 11:
 - 17 golden approval cases passed.
 - JavaScript syntax and `git diff --check` passed.
 - Local responsive walkthrough passed at mobile, tablet, and desktop widths.
+- The merged production origin returned `200` and the published HTML, CSS, and
+  JavaScript contained the frozen three-stage and 24-hour-auth contracts.
+- A Chrome DevTools 390-pixel production run reported no horizontal overflow
+  and advanced each of `pre_tour`, `post_tour`, and `pre_offer` from Step 1 to
+  Step 4 with the correct decision label, recommendation vocabulary, 2/3/5 file
+  cap, 20 MB limit, and stage-specific CTA.
 
 ## Remaining no-go items
 
-Do not invite the first-five cohort or enable automatic release until the exact
-frozen frontend is deployed and the remaining gates in `service-roadmap.md` and
-`first-five-operations.md` pass: one supported production-origin result per
-stage, duplicate-submit and notification behavior, production-UI auth return
-and mobile return, correction notification, empty-environment migration and
-backup/forward-fix rehearsal, named operational owners, named allowlist, and
-Michael's explicit cohort authorization.
+Do not invite the first-five cohort or enable automatic release until the
+remaining gates in `service-roadmap.md` and `first-five-operations.md` pass: one
+supported production-origin result per stage, duplicate-submit and notification
+behavior, production-UI authenticated return on mobile and desktop, correction
+notification, empty-environment migration and backup/forward-fix rehearsal,
+named operational owners, named allowlist, and Michael's explicit cohort
+authorization.
