@@ -85,6 +85,21 @@ Operations-facing and optionally buyer-visible views expose:
 
 ## Module Requirements
 
+### Stage-specific recommendation and scope
+
+Every analysis declares exactly one buyer-visible decision stage:
+
+| Stage | Direct recommendation vocabulary | Required emphasis | Suppressed unless separately gated |
+| --- | --- | --- | --- |
+| `pre_tour` | `tour`, `skip`, `watch`, `investigate` | Buyer fit, likely disappointments, directional value context, location/property unknowns, tour checklist | Offer ceiling, affordability conclusion, negotiation ladder |
+| `post_tour` | `revisit`, `pause`, `pursue`, `investigate` | Structured reactions and observations, disagreement, recommendation delta, follow-up evidence, proposed preferences | Unconfirmed preference changes; professional condition conclusions from buyer observations |
+| `pre_offer` | `pursue`, `pause`, `investigate`, `offer-prep` | Current status, deeper comps, documents, records, condition, economics and deadline-aware diligence | Every conditional module whose evidence/input gate does not pass |
+
+The recommendation must use the vocabulary for its declared stage. A direct
+recommendation is required even when it is `investigate`; a generic summary or
+score is not a substitute. Stage bounds reduce implied completeness—they do not
+relax identity, evidence, privacy, professional-boundary, or rendering gates.
+
 ### Required for every delivered pack
 
 | Module | Minimum deliverable |
@@ -119,6 +134,36 @@ Operations-facing and optionally buyer-visible views expose:
 
 Failure of a conditional gate suppresses the conclusion, not the topic. The pack
 must state which inputs or verification are missing.
+
+### Buyer preferences and media inputs
+
+Buyer-fit claims reference a versioned preference with importance, source,
+confidence, scope, household agreement state, created date, and last-confirmed
+date. Request-specific priorities govern the request. A material preference is
+stale when older than 30 days, contradicted by the request, followed by three
+tours, or affected by a material budget/location/timeline change. Stale
+preferences may trigger confirmation but cannot silently control a material
+recommendation. Model- and tour-derived changes remain proposals until accepted.
+
+P0 accepts page-stable documents, typed/pasted debriefs, and still photos.
+Photo-derived statements are observations or inferences with image locators and
+confidence; they are not professional inspection findings. P1 may add audio
+capture and transcription. A structured voice record must retain transcript,
+speaker/confidence metadata when available, notable statements, reactions,
+observations, interpretations, questions, agreement/disagreement, preference
+proposals, and recommendation implications. Video is P2 and cannot be accepted
+or promised until a specific evidence, privacy, retention, and cost contract is
+approved.
+
+Initial-request media caps are `pre_tour: 2`, `post_tour: 3`, and
+`pre_offer: 5`, with a 20 MB maximum per PDF, JPEG, PNG, or WebP file. These are
+total caps, not per-selection caps. Excess files fail before staging or upload;
+the buyer's other request data remains saved.
+
+Audio/voice capture is experimental and P1 unless a release explicitly confirms
+the transcript, correction, consent, retention, and structured-synthesis
+acceptance criteria. Until then, P0 uses typed or pasted content and must not
+represent keyword grouping as reliable voice understanding.
 
 ## Evidence Taxonomy
 
@@ -389,6 +434,17 @@ draft -> validating -> evaluable -> released
 Only `released` versions may be delivered or shared. Corrections always create a
 new version and rerun the complete gate; humans cannot directly promote a pack.
 
+Release is customer-visible and immediate: once deterministic gates pass, the
+independent evaluator returns `pass`, and the server signs the manifest, the
+private version becomes available to the authorized buyer and notification
+begins. There is no routine human approval queue between `evaluable` and
+`released`. Human work is limited to blocked/exception correction, buyer
+appeals, policy changes, incidents, and asynchronous post-delivery audit.
+
+Buyer-facing states map to `Request received`, `Researching`, `Needs your
+input`, `Decision packet ready`, and `Correcting a result`. Internal validator,
+evaluator, audit, and release codes are not buyer-facing statuses.
+
 ### Critical all-or-nothing gates
 
 Every gate returns `pass` or `fail` with machine-readable reasons. There is no
@@ -441,6 +497,13 @@ coverage/unknowns as specified.
 | Cost of waiting | Explicit horizon, alternative housing, future-price and rate scenarios, replacement differences, and disclosed exclusions |
 | Numeric negotiation | Value-context and adjusted-valuation minimums, current status/activity check, buyer intent, uncertainty range, and hard-stop disclaimer |
 | Scarcity | Reproducible criteria and results, or the output is labeled an analyst judgment rather than a market count |
+
+For schools, official assignment must include the applicable school year or
+effective date, boundary source, and checked date. Ratings are secondary context
+and cannot establish assignment or quality. For safety, the release must state
+dataset owner, observation period, geography, category definitions, property
+relationship, and reporting limitations. “Safe/unsafe” conclusions and
+reputation-based substitutes fail the evidence and recommendation gates.
 
 ### Independent evaluator
 
@@ -500,6 +563,12 @@ mark it `released`.
   entire service to human exception handling until corrected fixtures pass.
 - Sampling results version the rubric and gates; they never silently rewrite a
   released pack.
+
+Sampling is asynchronous and never inserts a routine reviewer wait before a
+gate-passing release. Audit selection is recorded at release time. A selected
+audit records owner, due time, outcome, affected modules/claims, and corrective
+action. Withdrawal and buyer-notification rules apply immediately when a hard
+stop defect is found.
 
 ## Hard Stops
 

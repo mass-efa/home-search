@@ -2,18 +2,49 @@
 
 Status: operating contract for the first five invited buyers  
 Scope: one private listing request through delivery and learning  
-Default posture: AI-assisted drafting, human-reviewed delivery
+Default posture: gate-driven delivery, human-owned exceptions and asynchronous audit
 
 ## Purpose
 
 The first five users are a product-learning cohort, not a scale test. The
 operation must ensure that every valid request has an owner, every buyer knows
-what is happening, and no unreviewed high-stakes recommendation is presented as
-a finished decision packet.
+what is happening, and no recommendation that failed a critical automated gate
+is presented as a finished decision packet.
 
-This contract adds the smallest human delivery loop around the existing
-workspace and `home_buddy_ai_evaluations` records. It does not enable automatic
-approval, public publication, payments, or a general-purpose support system.
+This contract adds the smallest human exception, audit, and support loop around
+the existing workspace and `home_buddy_ai_evaluations` records. A candidate that
+passes every deterministic gate and the independent evaluator is released to
+the authorized buyer immediately. It does not enable public publication,
+payments, or a general-purpose support system.
+
+## Cohort Authorization Gate
+
+This contract becomes operational only after internal production validation has
+passed and Michael explicitly authorizes up to five named/provisioned buyers.
+An implemented automatic-release path, a successful internal request, or a
+deployed change does not itself authorize an external invitation.
+
+Before the first invitation, retain a dated go record containing:
+
+- Exact frontend, function, schema/migration, prompt/rubric, gate, evaluator,
+  calculator, and source-adapter versions.
+- Clean test result for the exact candidate plus one successful production path
+  in each stage and one fail-closed exception.
+- Evidence that cross-user isolation, duplicate-submit protection, notification,
+  kill switch, withdrawal/correction, and mobile return work.
+- Named concierge, technical, exception/audit, and policy owners.
+- The five-user allowlist and Michael's explicit go decision.
+
+For the first five buyers, audit **100% of released packs asynchronously**. This
+exceeds the general alpha sampling floor because five releases are the smallest
+useful operating sample. Delivery is not delayed. Numeric offer guidance and
+all high-consequence or low-confidence cases remain mandatory audit cases at
+every later stage.
+
+After the fifth buyer, hold the documented go/change/stop review before adding
+any user. Expansion is a separate approval decision and requires no open
+critical incident, acceptable audit defects, functioning support/withdrawal,
+and credible comprehension and value evidence.
 
 ## Roles
 
@@ -22,11 +53,15 @@ must name an individual owner.
 
 - **Concierge owner:** accountable for buyer communication, status, timing, and
   final delivery.
-- **Evaluation reviewer:** checks identity, evidence, calculations, unknowns,
+- **Exception/audit reviewer:** corrects failed or uncertain cases and audits
+  released samples for identity, evidence, calculations, unknowns,
   recommendation strength, and buyer-question coverage.
 - **Technical owner:** resolves failed runs, access problems, and data defects.
-- **Release owner:** authorizes delivery. Michael is the default unless he
-  explicitly delegates this role.
+- **Policy owner:** authorizes gate/rubric changes, kill-switch recovery, and
+  incident closure. Michael is the default unless he explicitly delegates it.
+
+Routine release has no human release owner. Passing the complete automated
+release contract is the authorization for private delivery.
 
 The concierge owner is the buyer's single point of accountability. Internal
 handoffs must not require the buyer to diagnose the workflow.
@@ -39,10 +74,10 @@ approval outcomes are evidence-gate inputs, not buyer lifecycle statuses.
 | Status | Entry condition | Required owner action | Exit |
 | --- | --- | --- | --- |
 | `submitted` | Signed-in buyer submits a valid listing request | Confirm durable request ID and receipt | Concierge claims it |
-| `in_analysis` | Concierge owner is assigned and draft work has begun | Gather evidence and generate or update the candidate | Draft is ready for review, input is missing, or run fails |
-| `in_review` | Candidate and validation artifacts exist | Review evidence, calculations, buyer questions, unknowns, and recommendation wording | Approve, return for revision, or request buyer input |
+| `in_analysis` | Automated research has begun; concierge ownership may be assigned asynchronously | Monitor timing and handle communication without blocking analysis | Candidate passes and releases, needs buyer input, or enters exception |
+| `in_review` | A deterministic gate or independent evaluator produced an exception | Investigate, correct inputs/policy, and rerun the complete gate | Release automatically after a pass, request buyer input, or cancel |
 | `needs_buyer_input` | A missing fact or document blocks a useful result | Ask one specific, answerable question and state why it matters | Buyer responds, declines, or the reviewer proceeds with an explicit limitation |
-| `ready` | Release owner approves a private delivery version | Freeze the delivered version and create its private result destination | Notification is sent |
+| `ready` | Complete automated release contract passes and the server signs the private version | Create its private result destination and begin notification immediately | Notification is sent |
 | `delivered` | Ready notification succeeds and private result is accessible | Record delivery time and monitor open state | Buyer opens it, requests help, or the request is closed |
 | `closed` | Buyer confirms completion, becomes inactive, or the learning interview is complete | Record outcome and unresolved limitations | Terminal |
 | `cancelled` | Buyer cancels, listing is invalid, or work cannot responsibly continue | Record a safe reason and tell the buyer | Terminal |
@@ -51,12 +86,12 @@ Do not expose `auto_approved`, `needs_review`, `insufficient_evidence`, `failed`
 validator names, model errors, or internal reason codes as the primary buyer
 status. Map them into the lifecycle:
 
-- `auto_approved` may advance a candidate to `in_review`; during this cohort it
-  does not bypass the release owner.
+- `auto_approved`/gate pass advances directly to signed private release; no
+  routine human review is inserted.
 - `needs_review` remains `in_review` and creates a reviewer action.
 - `insufficient_evidence` becomes `needs_buyer_input` when the buyer can help,
-  otherwise it remains `in_review` for a safely limited result or becomes
-  `cancelled`.
+  otherwise it remains `in_review` for correction or suppression and a complete
+  gate rerun, or becomes `cancelled`.
 - `failed` remains `in_analysis` while a bounded retry is attempted, then moves
   to `in_review` for technical triage or `cancelled`.
 
@@ -73,7 +108,7 @@ tracker for five users. It must show:
 - Buyer identifier sufficient for authorized follow-up.
 - Listing address or URL.
 - Decision stage and requested analysis depth.
-- Concierge owner, evaluation reviewer, and release owner.
+- Concierge owner, exception/audit reviewer when applicable, and policy owner.
 - Latest approval outcome and blocking reason category.
 - Next action, next-action owner, and due time.
 - Delivered result version and delivery/open timestamps.
@@ -83,6 +118,10 @@ owner should claim a new request within two business hours. If the result will
 not be delivered within one business day, the owner must send a proactive,
 specific update. These are internal operating targets, not public completion
 promises until actual timing supports them.
+
+Claiming and owner assignment are operational accountability, not release
+gates. Automated analysis and a passing release continue without waiting for a
+concierge action.
 
 ## Reviewer Actions
 
@@ -96,9 +135,9 @@ The queue needs only these actions for the first five users:
    correction required.
 4. **Request buyer input:** ask one focused question or request one named
    document; move to `needs_buyer_input`.
-5. **Approve private release:** confirm the release checklist, freeze the
-   version, and move to `ready`.
-6. **Deliver:** send the private result link and move to `delivered` only after
+5. **Audit released result:** perform the release checklist asynchronously on
+   the sampled immutable version and record defects without silently editing it.
+6. **Deliver/retry notification:** send the private result link and move to `delivered` only after
    notification succeeds.
 7. **Withdraw or correct:** stop access to an affected version, preserve its
    audit record, explain the issue to the buyer, and prepare a corrected
@@ -106,9 +145,10 @@ The queue needs only these actions for the first five users:
 8. **Cancel:** use only when the buyer requests it or responsible analysis is
    impossible.
 
-### Release Checklist
+### Exception And Audit Checklist
 
-Before approval, the reviewer confirms:
+For every exception before rerunning gates, and for every sampled release after
+delivery, the reviewer confirms:
 
 - Property identity is correct or the limitation is prominent.
 - The top recommendation is proportional to the available evidence.
@@ -126,11 +166,16 @@ Before approval, the reviewer confirms:
 Use calm, outcome-oriented language. Never make the buyer interpret internal
 quality systems.
 
+The normal customer path is exactly `Request received` → `We're researching
+this home` → `Your decision packet is ready`. A passing request never pauses for
+routine reviewer approval. The `in_review` row below is exception-only and may
+appear only after a deterministic gate or independent evaluator fails.
+
 | Buyer state | Heading | Supporting copy | Primary action |
 | --- | --- | --- | --- |
 | `submitted` | Request received | We saved your home and priorities privately. We’ll keep this page updated as the analysis moves forward. | View request |
 | `in_analysis` | We’re researching this home | We’re checking property facts, market context, risks, and the questions you asked—not just summarizing the listing. | Add information |
-| `in_review` | Final evidence check underway | A reviewer is checking the recommendation, sources, and remaining unknowns before your decision packet is released. | View request |
+| `in_review` | We’re resolving an evidence issue | One part of the analysis needs correction or clarification before a reliable decision packet can be released. | View request |
 | `needs_buyer_input` | One detail would improve your result | We need the item below because it could materially change the recommendation. You can provide it or ask us to continue with the limitation noted. | Provide detail |
 | `ready` | Your decision packet is ready | Your private result separates what is supported, what is inferred, and what still needs verification. | View decision packet |
 | `delivered`, unopened | Your decision packet is waiting | Open the private result to see the recommendation, largest risks, and next actions. | View decision packet |
@@ -178,7 +223,9 @@ financing details, email addresses, or listing notes in event properties.
 | `request_claimed` | Concierge owner accepts accountability | time since submission band |
 | `buyer_input_requested` | A focused buyer question is sent | category, blocking boolean |
 | `buyer_input_received` | Requested input is attached to the request | category, response-time band |
-| `result_approved` | Release owner freezes a private result version | review-pass count, evidence-status category |
+| `result_released` | Complete gate passes and the server signs a private result version | decision stage, gate version, evidence-status category |
+| `result_audit_selected` | A released version enters asynchronous sampling | risk band, sampling rule |
+| `result_audit_closed` | A sampled audit is completed | outcome category, corrective-action category |
 | `result_notification_sent` | Ready notification provider accepts delivery | channel, success boolean |
 | `result_opened` | Buyer opens the specific delivered result version | time since ready band |
 | `result_summary_viewed` | Decision summary becomes visible for the first time | result version |
@@ -220,13 +267,23 @@ optimization.
   hours.
 - Every buyer receives a result or a specific proactive update within one
   business day.
-- Every delivered result passes the release checklist and has a preserved
+- Every delivered result passes the automated release contract and has a preserved
   version/audit record.
+- Required asynchronous samples are selected without delaying buyer delivery;
+  every selected audit reaches a recorded outcome.
 - No private result is exposed to another user or a public page.
 - No internal failure or approval code is presented as the buyer's primary
   status.
 - Central events can reconstruct submission, ownership, delivery, and open
   history for every request.
+- One request in each decision stage demonstrates stage-appropriate direct
+  recommendation vocabulary and bounded modules.
+- A gate-passing request is delivered without a routine reviewer action; a
+  failing request remains private and enters a recorded exception path.
+- Schools and safety either meet their active evidence requirements or display
+  an explicit gap and next action.
+- Stale or model-inferred preferences do not silently control a material
+  recommendation.
 
 ### Usability and comprehension
 
@@ -258,5 +315,6 @@ For the first five users:
 
 After five users, hold a go/change/stop review. Decide whether to improve
 activation, evidence quality, reviewer tooling, result comprehension, or
-retention based on the cohort evidence. Do not enable broader access or
-automatic approval solely because five requests completed.
+retention based on the cohort evidence. Do not enable broader access solely
+because five requests completed; expansion requires acceptable gate, audit,
+privacy, comprehension, and value results.
