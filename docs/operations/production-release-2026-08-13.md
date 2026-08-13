@@ -61,7 +61,7 @@ These are the local source hashes used by production version 11:
 
 | Source | SHA-256 |
 | --- | --- |
-| `supabase/functions/evaluate-home/index.ts` | `a9bf71ab976afc7881c2156d600ef9a381a6ebcb6b43020e161b9c2075ddecf4` |
+| `supabase/functions/evaluate-home/index.ts` | `782428e234a6f39b8ad4fa0d2e8fe0edd45c3cfb911ed13c383dad8a3f0f278c` |
 | `supabase/functions/_shared/trust-policy.mjs` | `04bb818fd34b0b0d7b7721aaef6b9216584f9acfd8b4a542ad3a8a2acd29940f` |
 | `lib/sources/king-county-property-identity.js` | `9b0a9daebcd92e91b6c01f62116eeeff7c8d60521537b98e3c66725a4dfca2e0` |
 | `lib/sources/seattle-safety.js` | `436d6d3a92625afc2cebf378dcf8f8babc443afa1272518c2a88366ac835317e` |

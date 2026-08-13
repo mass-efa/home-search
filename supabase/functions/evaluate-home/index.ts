@@ -189,8 +189,6 @@ function extractOutputText(data: Record<string, unknown>) {
 }
 
 function getOpenAiApiKey() {
-  // The legacy fallback remains only to preserve exact source parity with the
-  // currently deployed v11 bundle. Production is configured with OPENAI_API_KEY.
   return Deno.env.get("OPENAI_API_KEY") ||
     Deno.env.get("Home_search_oai_key") || "";
 }
