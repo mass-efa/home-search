@@ -194,7 +194,15 @@ Ship and verify in this order:
    active schools/safety evidence.
 7. Invite 3–5 real buyers with a named concierge/support owner and collect a short debrief after result open.
 
-Custom-domain authentication email is desirable before expanding the cohort, but it is not a blocker for implementation or controlled tests with provisioned recipients. If built-in email throttling interferes, preserve the request and use an explicit concierge recovery path rather than weakening authentication.
+Resend is the selected production authentication-email provider and
+`tryhomei.us` is the registered controlled-MVP domain. The
+`auth.tryhomei.us` Resend/Supabase SMTP integration reached **Ready to Send** on
+August 13, 2026. External-recipient magic-link delivery and signed-in return to
+Homei were verified the same day. Custom-domain email is not a blocker for
+implementation or controlled tests with provisioned project-team recipients,
+but it is required before inviting external buyers. If built-in email throttling
+interferes before activation, preserve the request and use an explicit concierge
+recovery path rather than weakening authentication.
 
 P0 accepts photos and page-stable documents as buyer evidence. Structured typed
 debrief is also P0. Audio capture/transcription is P1; video upload and analysis
@@ -226,8 +234,8 @@ After that gate, choose the smallest next investment supported by observed behav
 5. Prepare a concierge-supported invitation and debrief for 3–5 real buyers,
    then ask Michael for the separate named-cohort go decision.
 6. Keep GitHub Pages as the temporary shell and private-by-default Supabase
-   storage as the product system of record. Select a permanent domain and custom
-   SMTP provider before expanding beyond the controlled cohort.
+   storage as the product system of record. Monitor delivery failures and
+   throttling through Resend and Supabase as the controlled cohort expands.
 
 ## MVP Execution Checkpoint
 

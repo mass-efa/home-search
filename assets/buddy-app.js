@@ -3,6 +3,7 @@
   var UI_STATE_KEY = "homeFindingBuddyMvp.ui.v2";
   var FUNNEL_KEY = "homeFindingBuddyMvp.funnel.v2";
   var REQUEST_DRAFT_KEY = "homeFindingBuddyMvp.requestDraft.v2";
+  var REQUEST_RETURN_KEY = "homeFindingBuddyMvp.requestReturn.v1";
   var DOCUMENT_STAGE_KEY = "homeFindingBuddyMvp.documentStage.v2";
   var PENDING_IMPORT_KEY = "homeFindingBuddyMvp.pendingImport.v2";
   var SESSION_ANCHOR_KEY = "homeFindingBuddyMvp.sessionAnchor.v2";
@@ -41,6 +42,7 @@
   };
   var syncTimer = null;
   var requestStatusTimer = null;
+  var authRetryTimer = null;
   var recognition = null;
   var activeVoiceTarget = null;
   var activeVoiceTranscript = "";
@@ -728,24 +730,138 @@
     return created.data;
   }
 
+  function requestDraftFromForm(form) {
+    if (!form) return null;
+    var data = new FormData(form);
+    return {
+      listingUrl: text(data.get("listingUrl")),
+      listingAddress: text(data.get("listingAddress")),
+      listingPrice: text(data.get("listingPrice")),
+      listingQuestions: text(data.get("listingQuestions")),
+      listingNotes: text(data.get("listingNotes")),
+      tourReaction: text(data.get("tourReaction")),
+      offerTiming: text(data.get("offerTiming")),
+      decisionStage: text(data.get("decisionStage")),
+      analysisDepthChoice: text(data.get("analysisDepthChoice"))
+    };
+  }
+
   function saveRequestDraft(form) {
     if (!form) return;
     try {
-      var data = new FormData(form);
-      localStorage.setItem(scopedKey(REQUEST_DRAFT_KEY), JSON.stringify({
-        listingUrl: text(data.get("listingUrl")),
-        listingAddress: text(data.get("listingAddress")),
-        listingPrice: text(data.get("listingPrice")),
-        listingQuestions: text(data.get("listingQuestions")),
-        listingNotes: text(data.get("listingNotes")),
-        tourReaction: text(data.get("tourReaction")),
-        offerTiming: text(data.get("offerTiming")),
-        decisionStage: text(data.get("decisionStage")),
-        analysisDepthChoice: text(data.get("analysisDepthChoice"))
-      }));
+      localStorage.setItem(scopedKey(REQUEST_DRAFT_KEY), JSON.stringify(requestDraftFromForm(form)));
     } catch (error) {
       // Draft recovery is best-effort; submission remains available without storage.
     }
+  }
+
+  function loadRequestReturnContext() {
+    try {
+      var context = JSON.parse(sessionStorage.getItem(REQUEST_RETURN_KEY) || "null");
+      if (!context || context.view !== "request") return null;
+      return {
+        view: "request",
+        step: Math.min(Math.max(Number(context.step) || 1, 1), 4),
+        scope: text(context.scope) || activeStateScope
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function requestDraftForScope(scope) {
+    try {
+      return JSON.parse(localStorage.getItem(scopedKey(REQUEST_DRAFT_KEY, scope)) || "null");
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function resolvedRequestReturn() {
+    var context = loadRequestReturnContext();
+    var permittedScope = context && (context.scope === activeStateScope || context.scope === "anonymous");
+    var draft = permittedScope ? requestDraftForScope(context.scope) : null;
+    if (draft && (text(draft.listingAddress) || text(draft.listingUrl))) {
+      return { context: context, draft: draft };
+    }
+
+    draft = requestDraftForScope(activeStateScope);
+    if (draft && (text(draft.listingAddress) || text(draft.listingUrl))) {
+      return {
+        context: {
+          view: "request",
+          step: Math.min(Math.max(Number(uiState.requestStep) || 1, 1), 4),
+          scope: activeStateScope
+        },
+        draft: draft
+      };
+    }
+
+    var form = document.querySelector("[data-listing-form]");
+    draft = requestDraftFromForm(form);
+    if (draft && (text(draft.listingAddress) || text(draft.listingUrl))) {
+      saveRequestDraft(form);
+      return {
+        context: {
+          view: "request",
+          step: Math.min(Math.max(Number(uiState.requestStep) || 1, 1), 4),
+          scope: activeStateScope
+        },
+        draft: draft
+      };
+    }
+    return null;
+  }
+
+  function rememberRequestReturn(form) {
+    if (!form) return;
+    saveRequestDraft(form);
+    try {
+      sessionStorage.setItem(REQUEST_RETURN_KEY, JSON.stringify({
+        view: "request",
+        step: uiState.requestStep,
+        scope: activeStateScope
+      }));
+    } catch (error) {}
+    renderRequestReturn();
+  }
+
+  function clearRequestReturnContext() {
+    try { sessionStorage.removeItem(REQUEST_RETURN_KEY); } catch (error) {}
+  }
+
+  function renderRequestReturn() {
+    var resolved = resolvedRequestReturn();
+    var context = resolved && resolved.context;
+    var draft = resolved && resolved.draft;
+    var home = draft && (text(draft.listingAddress) || text(draft.listingUrl));
+    document.querySelectorAll("[data-request-return]").forEach(function (node) {
+      node.hidden = !home;
+    });
+    var updatePreferences = document.querySelector("[data-generate-brief]");
+    if (updatePreferences) {
+      updatePreferences.textContent = home ? "Update preferences & return" : "Update my preferences";
+    }
+    if (!home) return;
+    document.querySelectorAll("[data-request-return-home]").forEach(function (node) {
+      node.textContent = home;
+    });
+    document.querySelectorAll("[data-request-return-step]").forEach(function (node) {
+      node.textContent = "Return to step " + context.step + " of 4.";
+    });
+  }
+
+  function returnToRequest() {
+    var resolved = resolvedRequestReturn();
+    if (!resolved) return;
+    var context = resolved.context;
+    var form = document.querySelector("[data-listing-form]");
+    restoreRequestDraft(form, context.scope);
+    updateRequestReview();
+    setRequestStep(context.step, { track: false });
+    clearRequestReturnContext();
+    renderRequestReturn();
+    setActiveView("request", { focus: true });
   }
 
   function clearRequestDraft(form, options) {
@@ -759,10 +875,10 @@
     updateRequestReview();
   }
 
-  function restoreRequestDraft(form) {
+  function restoreRequestDraft(form, scope) {
     if (!form) return;
     try {
-      var draft = JSON.parse(localStorage.getItem(scopedKey(REQUEST_DRAFT_KEY)) || "null");
+      var draft = JSON.parse(localStorage.getItem(scopedKey(REQUEST_DRAFT_KEY, scope)) || "null");
       if (!draft) return;
       Object.keys(draft).forEach(function (name) {
         var field = form.elements[name];
@@ -775,6 +891,10 @@
       });
       var selectedDepth = form.querySelector('input[name="analysisDepthChoice"]:checked');
       if (selectedDepth && form.elements.analysisDepth) form.elements.analysisDepth.value = selectedDepth.value;
+      document.querySelectorAll("[data-question-prompt]").forEach(function (chip) {
+        var prompt = chip.getAttribute("data-question-prompt");
+        chip.setAttribute("aria-pressed", text(draft.listingQuestions).indexOf(prompt + ":") !== -1 ? "true" : "false");
+      });
       renderDocumentSelection();
     } catch (error) {
       // Ignore malformed or unavailable private-browser storage.
@@ -955,6 +1075,7 @@
     remote.sessionStartedAt = null;
     remote.workspaceId = null;
     remote.lockReason = reason || "For your privacy, verify it’s you to reopen private home research.";
+    clearRequestReturnContext();
     replacePrivateState("anonymous");
     setActiveView("landing", { track: false });
     render();
@@ -1066,7 +1187,7 @@
       return;
     }
     if (uiState.authRetryAfter && Date.now() < uiState.authRetryAfter) {
-      setRemoteStatus("Email limit reached. Please try again in about an hour.");
+      setRemoteStatus(authRetryStatus(uiState.authRetryAfter - Date.now()));
       return;
     }
     setRemoteStatus("Sending magic link");
@@ -1079,10 +1200,12 @@
     });
     if (result.error) {
       trackFunnel("auth_link_requested", { success: false });
-      if (includesAny(result.error.message, ["rate limit", "too many"])) {
-        uiState.authRetryAfter = Date.now() + (60 * 60 * 1000);
+      var retryDelay = authRetryDelay(result.error);
+      if (retryDelay) {
+        uiState.authRetryAfter = Date.now() + retryDelay;
         saveUiState();
-        setRemoteStatus("Email limit reached. Please try again in about an hour.");
+        setRemoteStatus(authRetryStatus(retryDelay));
+        renderAuth();
       } else {
         setRemoteStatus("We couldn’t send the sign-in email. Please try again.");
       }
@@ -1093,6 +1216,33 @@
     setRemoteStatus("Magic link sent");
     trackFunnel("auth_link_requested", { success: true });
     trackFunnel("auth_link_sent", { method: "magic_link" });
+  }
+
+  function authRetryDelay(error) {
+    var code = text(error && error.code).toLowerCase();
+    var message = text(error && error.message).toLowerCase();
+    if (code === "over_email_send_rate_limit" || message.includes("email rate limit exceeded")) {
+      return 60 * 60 * 1000;
+    }
+    if (code === "over_request_rate_limit" || Number(error && error.status) === 429 ||
+      includesAny(message, ["rate limit", "too many", "only request this after"])) {
+      return 60 * 1000;
+    }
+    return 0;
+  }
+
+  function authRetryStatus(remainingMs) {
+    if (remainingMs > 2 * 60 * 1000) {
+      return "This project’s sign-in email limit has been reached. Please try again later.";
+    }
+    return "Please wait a minute before requesting another sign-in link.";
+  }
+
+  function authRetryButtonLabel(remainingMs) {
+    if (remainingMs > 2 * 60 * 1000) {
+      return "Try again in " + Math.ceil(remainingMs / (60 * 1000)) + " min";
+    }
+    return "Try again in " + Math.max(1, Math.ceil(remainingMs / 1000)) + " sec";
   }
 
   async function signOut() {
@@ -1443,6 +1593,11 @@
       learningLog: []
     };
     saveState();
+    if (resolvedRequestReturn()) {
+      setVoiceStatus("Preferences updated. Returning to your home.");
+      returnToRequest();
+      return;
+    }
     document.querySelector("#brief").scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -1540,6 +1695,7 @@
     });
     saveState();
     clearRequestDraft(form, { preserveDocuments: true });
+    clearRequestReturnContext();
     setActiveView("results");
     var listingSection = document.querySelector("#listings");
     if (listingSection) listingSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2069,6 +2225,7 @@
     renderDebriefOptions();
     renderGuidedExperience();
     renderPreferenceSnapshot();
+    renderRequestReturn();
     syncDecisionStagePresentation();
   }
 
@@ -2251,9 +2408,20 @@
 
     if (authForm) authForm.hidden = Boolean(remote.user);
     if (authSubmit) {
-      var retryBlocked = Boolean(uiState.authRetryAfter && Date.now() < uiState.authRetryAfter);
+      var retryRemaining = uiState.authRetryAfter ? uiState.authRetryAfter - Date.now() : 0;
+      var retryBlocked = retryRemaining > 0;
+      if (!retryBlocked && uiState.authRetryAfter) {
+        uiState.authRetryAfter = null;
+        saveUiState();
+      }
       authSubmit.disabled = retryBlocked;
-      authSubmit.textContent = retryBlocked ? "Try again in about an hour" : "Email me a sign-in link";
+      authSubmit.textContent = retryBlocked
+        ? authRetryButtonLabel(retryRemaining)
+        : "Email me a sign-in link";
+      if (authRetryTimer) window.clearTimeout(authRetryTimer);
+      authRetryTimer = retryBlocked
+        ? window.setTimeout(renderAuth, retryRemaining > 2 * 60 * 1000 ? 30000 : 1000)
+        : null;
     }
     if (authActions) authActions.hidden = !remote.user;
     if (syncButton) syncButton.disabled = !remote.user;
@@ -2752,6 +2920,7 @@
         var listingUrl = document.querySelector("#listingUrl");
         if (!heroUrl || !listingUrl || !heroUrl.reportValidity()) return;
         listingUrl.value = text(heroUrl.value);
+        saveRequestDraft(document.querySelector("[data-listing-form]"));
         trackFunnel("listing_url_entered", {
           source: includesAny(heroUrl.value, ["redfin"]) ? "redfin" : "other"
         });
@@ -2911,6 +3080,7 @@
       var previousStep = event.target.closest("[data-request-back]");
       var addRequestContext = event.target.closest("[data-add-request-context]");
       var editRequest = event.target.closest("[data-edit-request]");
+      var returnToRequestButton = event.target.closest("[data-return-to-request]");
       if (accept) acceptSuggestion(accept.getAttribute("data-accept-suggestion"));
       if (reject) rejectSuggestion(reject.getAttribute("data-reject-suggestion"));
       if (aiButton) requestAiEvaluation(aiButton.getAttribute("data-run-ai-evaluation"));
@@ -2944,16 +3114,21 @@
       }
       if (viewButton) {
         var view = viewButton.getAttribute("data-view-target") || viewButton.getAttribute("data-nav-view");
+        if (uiState.activeView === "request" && (view === "workspace" || view === "account")) {
+          rememberRequestReturn(document.querySelector("[data-listing-form]"));
+        }
         if (view === "request") {
           if (viewButton.hasAttribute("data-new-request")) {
             uiState.editingListingId = null;
             saveUiState();
             clearRequestDraft(document.querySelector("[data-listing-form]"));
+            clearRequestReturnContext();
           }
           setRequestStep(1, { track: false });
         }
         setActiveView(view, { focus: true });
       }
+      if (returnToRequestButton) returnToRequest();
       if (nextStep) {
         var currentPanel = nextStep.closest("[data-request-step]");
         var fields = currentPanel ? currentPanel.querySelectorAll("input, textarea, select") : [];

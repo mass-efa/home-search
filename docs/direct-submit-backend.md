@@ -17,7 +17,7 @@ It accepts a POST request from the site, creates a GitHub issue in `mass-efa/hom
 - `GITHUB_TOKEN`: fine-grained GitHub token with Issues read/write access for `mass-efa/home-search`.
 - `GITHUB_OWNER`: `mass-efa`
 - `GITHUB_REPO`: `home-search`
-- `ALLOWED_ORIGIN`: `https://mass-efa.github.io`
+- `ALLOWED_ORIGIN`: `https://tryhomei.us`
 
 ## Site Configuration
 

@@ -61,6 +61,16 @@ For production, set `ALLOWED_ORIGIN` to:
 https://mass-efa.github.io
 ```
 
+When the GitHub Pages custom domain is active, use the canonical production
+origin instead:
+
+```bash
+https://tryhomei.us
+```
+
+The Edge Function CORS setting must match the origin rendered in the browser;
+do not include a path or trailing slash.
+
 Supabase provides `SUPABASE_URL` and `SUPABASE_ANON_KEY` to Edge Functions.
 
 ## Deploy

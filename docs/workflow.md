@@ -16,7 +16,7 @@ This site supports a public intake-to-publication workflow for home evaluations.
 
 Request status is visible at:
 
-`https://mass-efa.github.io/home-search/requests.html`
+`https://tryhomei.us/requests.html`
 
 ## Why Requests Use GitHub Issues
 

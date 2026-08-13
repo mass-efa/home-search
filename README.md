@@ -16,7 +16,12 @@ The intended reader should be able to open a page, understand the current buyer 
 
 ## Published Pages
 
-When GitHub Pages is enabled, the site should be available at:
+The primary public site is:
+
+https://tryhomei.us/
+
+GitHub Pages remains the underlying host, with the repository URL available as
+a fallback during DNS or certificate propagation:
 
 https://mass-efa.github.io/home-search/
 

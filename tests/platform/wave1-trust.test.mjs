@@ -204,6 +204,27 @@ test("view and request-step transitions return buyers to the beginning of the ne
   assert.match(buyerApp, /activeHeading\.focus\(\{ preventScroll: true \}\)/);
 });
 
+test("preference and account detours preserve and restore the in-progress request", () => {
+  assert.match(app, /data-request-return[\s\S]*data-return-to-request[\s\S]*Back to your home/);
+  assert.match(buyerApp, /REQUEST_RETURN_KEY/);
+  assert.match(buyerApp, /rememberRequestReturn\(document\.querySelector\("\[data-listing-form\]"\)\)/);
+  assert.match(buyerApp, /restoreRequestDraft\(form, context\.scope\)/);
+  assert.match(buyerApp, /setRequestStep\(context\.step, \{ track: false \}\)/);
+  assert.match(buyerApp, /requestDraftForScope\(activeStateScope\)/);
+  assert.match(buyerApp, /requestDraftFromForm\(form\)[\s\S]*saveRequestDraft\(form\)/);
+  assert.match(buyerApp, /Update preferences & return/);
+  assert.match(buyerApp, /if \(resolvedRequestReturn\(\)\)[\s\S]*returnToRequest\(\)/);
+  assert.match(buyerApp, /listingUrl\.value = text\(heroUrl\.value\);[\s\S]*saveRequestDraft/);
+  assert.match(buyerApp, /clearRequestReturnContext\(\);[\s\S]*replacePrivateState\("anonymous"\)/);
+});
+
+test("magic-link throttles distinguish the project email quota from the resend cooldown", () => {
+  assert.match(buyerApp, /over_email_send_rate_limit[\s\S]*60 \* 60 \* 1000/);
+  assert.match(buyerApp, /over_request_rate_limit[\s\S]*60 \* 1000/);
+  assert.match(buyerApp, /authRetryButtonLabel\(retryRemaining\)/);
+  assert.match(buyerApp, /window\.setTimeout\(renderAuth/);
+});
+
 test("the buyer intake implements the canonical three-stage walkthrough contract", () => {
   assert.match(app, /option value="pre_tour"/);
   assert.match(app, /option value="post_tour"/);

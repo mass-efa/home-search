@@ -30,7 +30,11 @@
 
   function authErrorMessage(error) {
     var message = text(error && error.message).toLowerCase();
+    var code = text(error && error.code).toLowerCase();
     var status = Number(error && error.status);
+    if (code === "over_email_send_rate_limit" || message.includes("email rate limit exceeded")) {
+      return "The project’s sign-in email limit has been reached. Try again later or check the project email setup.";
+    }
     if (status === 429 || message.includes("rate limit")) {
       return "Too many sign-in attempts. Wait a minute, then try again.";
     }

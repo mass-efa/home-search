@@ -367,7 +367,9 @@ Brand application rules for this phase:
 - Keep the experience warm, calm, plainspoken, and confidence-building rather than playful or cartoonish.
 - Use “your home-buying research partner” to explain the product on first encounter; do not rely on the name alone.
 - Keep the working name in one configurable UI location so it can be replaced after naming and trademark review.
-- Authentication emails may retain a neutral sender identity until a domain is selected.
+- `tryhomei.us` is the registered controlled-MVP domain, pending naming review.
+  Authentication email should use `Homei <login@auth.tryhomei.us>` after Resend
+  verification.
 - Do not publish claims implying brokerage, agency, inspection, appraisal, or fiduciary services.
 
 ### 3. Voice Tour Debrief
@@ -570,12 +572,13 @@ No recoverable failure may erase a pasted listing, buyer priorities, notes, or s
 Priority recovery cases:
 
 1. **Email throttled or unavailable:** preserve the draft, explain the temporary limitation in plain language, show when retry is reasonable, and offer a reviewer-assisted path for the controlled test cohort.
-2. **Magic link opened in another browser or expired:** return the buyer to the preserved request after a fresh sign-in rather than restarting intake.
-3. **Listing URL cannot be parsed:** accept an address and user-provided listing facts; never reject a legitimate request solely because automated extraction failed.
-4. **Submission times out or is retried:** use an idempotent request identifier so the buyer cannot accidentally create duplicate paid or reviewed work.
-5. **Analysis needs more evidence:** show a `Needs your input` state with the smallest specific request, such as an address, disclosure, or inspection report.
-6. **Analysis or review is delayed:** retain the request, show the last confirmed state, and give a realistic notification expectation without inventing progress.
-7. **Result cannot load:** keep the durable request visible and provide a retry path; do not show an empty workspace as though the request never existed.
+2. **Preference or account detour:** save the in-progress request before leaving it, show a clear return control, and restore the exact request step and entered fields when the buyer returns.
+3. **Magic link opened in another browser or expired:** return the buyer to the preserved request after a fresh sign-in rather than restarting intake.
+4. **Listing URL cannot be parsed:** accept an address and user-provided listing facts; never reject a legitimate request solely because automated extraction failed.
+5. **Submission times out or is retried:** use an idempotent request identifier so the buyer cannot accidentally create duplicate paid or reviewed work.
+6. **Analysis needs more evidence:** show a `Needs your input` state with the smallest specific request, such as an address, disclosure, or inspection report.
+7. **Analysis or review is delayed:** retain the request, show the last confirmed state, and give a realistic notification expectation without inventing progress.
+8. **Result cannot load:** keep the durable request visible and provide a retry path; do not show an empty workspace as though the request never existed.
 
 Internal errors, provider names, stack traces, raw model output, approval gates, and database status names must not be exposed as the primary buyer message.
 
@@ -591,6 +594,7 @@ Acceptance criteria:
 - Long addresses, URLs, source names, and recommendation text wrap without clipping.
 - Keyboard focus does not strand the user or hide the active field and action.
 - Documents show upload state and recoverable errors; a buyer can leave and return without losing the request draft.
+- Preference and sign-in detours show a prominent return action and restore the buyer to the same request step.
 - Result sections use meaningful headings and native disclosure controls where collapse improves scanning.
 - Text remains the complete fallback when voice capture is unavailable or inappropriate.
 

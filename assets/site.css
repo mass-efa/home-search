@@ -2900,6 +2900,42 @@ textarea {
   margin: 0 auto 42px;
 }
 
+.request-return-banner {
+  display: flex;
+  max-width: 920px;
+  margin: 0 auto 28px;
+  padding: 20px 22px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid var(--buddy-border);
+  border-radius: 18px;
+  background: var(--buddy-warm);
+  box-shadow: 0 12px 34px rgba(34, 34, 34, 0.06);
+}
+
+.request-return-banner[hidden] {
+  display: none;
+}
+
+.request-return-banner strong {
+  display: block;
+  max-width: 620px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+}
+
+.request-return-banner p {
+  margin: 5px 0 0;
+  color: var(--buddy-muted);
+  font-size: 0.9rem;
+}
+
+.request-return-banner .button {
+  flex: 0 0 auto;
+}
+
 .profile-card {
   max-width: 920px;
   margin: 24px auto 0;
@@ -3246,6 +3282,16 @@ textarea {
   .profile-card,
   .account-card {
     padding: 22px 18px;
+  }
+
+  .request-return-banner {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .request-return-banner .button {
+    width: 100%;
   }
 
   .buddy-footer {
