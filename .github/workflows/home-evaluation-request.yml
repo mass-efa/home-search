@@ -72,7 +72,7 @@ jobs:
                 "1. Run the `home-evaluation` skill using the listing/address and notes in this issue.",
                 "2. Create a public HTML brief under `homes/`.",
                 "3. Add the brief to `data/homes.json`.",
-                "4. Push to `main`; GitHub Pages will publish the result.",
+                "4. Push to `main`; Cloudflare Pages will publish the result.",
                 "",
                 "Privacy reminder: this issue and any published brief are public."
               ].join("\n")

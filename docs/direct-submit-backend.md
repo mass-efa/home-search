@@ -1,6 +1,8 @@
 # Direct Submit Backend
 
-The public site currently uses a safe GitHub confirmation flow. A static GitHub Pages site cannot create GitHub issues directly without exposing a token in browser JavaScript.
+The public site currently uses a safe GitHub confirmation flow. A static
+Cloudflare Pages site cannot create GitHub issues directly without exposing a
+token in browser JavaScript.
 
 To remove the extra "submit in GitHub" step, deploy a tiny backend endpoint that holds the GitHub token privately and creates issues server-side.
 

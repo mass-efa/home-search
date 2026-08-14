@@ -20,10 +20,10 @@ The primary public site is:
 
 https://tryhomei.us/
 
-GitHub Pages remains the underlying host, with the repository URL available as
-a fallback during DNS or certificate propagation:
+Cloudflare Pages is the production host. It deploys the private GitHub
+repository's `main` branch automatically. The provider-hosted fallback is:
 
-https://mass-efa.github.io/home-search/
+https://tryhomei.pages.dev/
 
 Current public brief:
 
@@ -58,7 +58,9 @@ The rubric is intentionally practical. Each brief should lead with the decision 
 
 ## Publishing Model
 
-This is a dependency-free static site. GitHub Pages can serve it directly from the `main` branch:
+This is a dependency-free static site. Cloudflare Pages serves it directly from
+the private repository's `main` branch (no framework; build command `exit 0`;
+output directory `.`):
 
 - `index.html` is the home page.
 - `submit.html` is the public request page.
@@ -84,7 +86,10 @@ For the detailed workflow, see [docs/workflow.md](docs/workflow.md).
 
 ## Automation Boundary
 
-The current version intentionally uses GitHub Issues as the intake queue because GitHub Pages is static and cannot safely hold private API keys or GitHub tokens in the browser. Fully automatic AI generation can be added later with a server-side or GitHub Actions runner using repository secrets and a review gate.
+The current version intentionally uses GitHub Issues as the intake queue because
+the browser-delivered site is static and cannot safely hold private API keys or
+GitHub tokens. Fully automatic AI generation can be added later with a
+server-side or GitHub Actions runner using repository secrets and a review gate.
 
 For the first step toward direct submission without the extra GitHub confirmation click, see [docs/direct-submit-backend.md](docs/direct-submit-backend.md).
 

@@ -12,7 +12,7 @@ This site supports a public intake-to-publication workflow for home evaluations.
 6. The home-evaluation skill is run against the request.
 7. The generated HTML brief is committed under `homes/`.
 8. `data/homes.json` is updated so the brief appears on the homepage.
-9. GitHub Pages republishes the site from `main`.
+9. Cloudflare Pages republishes the site automatically from `main`.
 
 Request status is visible at:
 
@@ -20,7 +20,9 @@ Request status is visible at:
 
 ## Why Requests Use GitHub Issues
 
-GitHub Pages is a static host. Static pages cannot safely hold a GitHub token or private API key in the browser. GitHub Issues gives the public site a durable queue without exposing credentials.
+Cloudflare Pages is a static host. Static pages cannot safely hold a GitHub
+token or private API key in the browser. GitHub Issues gives the public site a
+durable queue without exposing credentials.
 
 ## Future Automation Option
 

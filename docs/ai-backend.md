@@ -55,14 +55,7 @@ The deployed alpha also accepts the existing custom secret name
 `Home_search_oai_key`. `OPENAI_API_KEY` remains the preferred portable name for
 new environments.
 
-For production, set `ALLOWED_ORIGIN` to:
-
-```bash
-https://mass-efa.github.io
-```
-
-When the GitHub Pages custom domain is active, use the canonical production
-origin instead:
+For production, use the canonical Cloudflare Pages custom-domain origin:
 
 ```bash
 https://tryhomei.us

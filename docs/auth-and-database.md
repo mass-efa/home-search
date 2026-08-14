@@ -16,7 +16,7 @@ The Home-Finding Buddy MVP can run in two modes:
 ```js
 window.HOME_SEARCH_SUPABASE_URL = "https://YOUR_PROJECT.supabase.co";
 window.HOME_SEARCH_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-window.HOME_SEARCH_AUTH_REDIRECT_URL = "https://tryhomei.us/app.html";
+window.HOME_SEARCH_AUTH_REDIRECT_URL = "https://tryhomei.us/app";
 ```
 
 For local testing, set the redirect URL to your local page:
@@ -28,10 +28,12 @@ window.HOME_SEARCH_AUTH_REDIRECT_URL = "http://127.0.0.1:8788/app.html";
 6. In Supabase Auth settings, add the deployed app and reviewer URLs, plus
    their local test equivalents, to allowed redirect URLs:
 
-   - `https://tryhomei.us/app.html`
-   - `https://tryhomei.us/review.html`
-   - `https://mass-efa.github.io/home-search/app.html` (deployment fallback)
-   - `https://mass-efa.github.io/home-search/review.html` (deployment fallback)
+   - `https://tryhomei.us/app`
+   - `https://tryhomei.us/review`
+   - `https://tryhomei.us/app.html` (legacy entry URL; Cloudflare redirects it)
+   - `https://tryhomei.us/review.html` (legacy entry URL; Cloudflare redirects it)
+   - `https://tryhomei.pages.dev/app` (deployment fallback)
+   - `https://tryhomei.pages.dev/review` (deployment fallback)
    - `http://127.0.0.1:8788/app.html`
    - `http://127.0.0.1:8788/review.html`
 
@@ -63,7 +65,7 @@ secret used by the static site, or any other browser-delivered file.
    opening self-serve login beyond the controlled alpha.
 7. Keep the custom-domain, deployment-fallback, and local URLs above in the
    Supabase redirect allowlist. Set the Supabase Site URL to
-   `https://tryhomei.us/app.html`.
+   `https://tryhomei.us/app`.
 
 ### Acceptance check
 

@@ -1,6 +1,9 @@
 # Home Search Service Roadmap
 
-This repo is currently a public static workflow for publishing buyer-oriented home evaluation briefs. To turn it into a service that other people can use, the product should evolve in small steps instead of jumping straight to a full marketplace or real-estate platform.
+This repo is currently a private-source, Cloudflare Pages-hosted static workflow
+for publishing buyer-oriented home evaluation briefs. To turn it into a service
+that other people can use, the product should evolve in small steps instead of
+jumping straight to a full marketplace or real-estate platform.
 
 ## Product Thesis
 
@@ -33,7 +36,7 @@ This is the best first service because it preserves the value of the current rep
 
 Current state:
 
-- Static GitHub Pages site.
+- Static Cloudflare Pages site sourced from a private GitHub repository.
 - Public request form.
 - GitHub Issues as queue.
 - Manual or Codex-assisted evaluation.
@@ -56,7 +59,7 @@ Core features:
 
 Recommended implementation:
 
-- Keep the static marketing and public examples on GitHub Pages for now.
+- Keep the static marketing and public examples on Cloudflare Pages for now.
 - Deploy the existing Worker or a small backend API for direct submissions.
 - Store requests in a real database instead of GitHub Issues.
 - Keep GitHub Issues only as an internal fallback or engineering queue.
@@ -174,7 +177,9 @@ For the buyer-facing MVP shape, see [mvp-spec.md](mvp-spec.md).
 
 Do not wait for a permanent product name or custom domain to validate the private buyer loop. Use **Homei** only as a reversible working UI name during controlled testing; retain neutral repository, database, and infrastructure names until naming and trademark review are complete.
 
-The immediate release is a controlled private cohort, not an open public launch. GitHub Pages may remain the temporary public shell, while authenticated requests, buyer notes, files, evaluations, and released results remain in private application storage.
+The immediate release is a controlled private cohort, not an open public launch.
+Cloudflare Pages is the public shell, while authenticated requests, buyer notes,
+files, evaluations, and released results remain in private application storage.
 
 ### P0: Controlled Buyer Journey
 
@@ -233,7 +238,7 @@ After that gate, choose the smallest next investment supported by observed behav
    exception paths while both release switches remain disabled by default.
 5. Prepare a concierge-supported invitation and debrief for 3–5 real buyers,
    then ask Michael for the separate named-cohort go decision.
-6. Keep GitHub Pages as the temporary shell and private-by-default Supabase
+6. Keep Cloudflare Pages as the static shell and private-by-default Supabase
    storage as the product system of record. Monitor delivery failures and
    throttling through Resend and Supabase as the controlled cohort expands.
 
@@ -328,7 +333,7 @@ remain no-go.**
 | Backend / evaluation | Passed for fail-closed scope | `evaluate-home` production version 11, platform JWT verification on, exact production CORS, environment release gate pinned false; one synthetic pre-tour request ended `needs_buyer_input` with no release | Produce one supported gate-passing fixture per stage; verify duplicate retry and notification |
 | Privacy / auth | Passed for tested scope | Two disposable users saw only their own rows; direct preference insert returned 403; cross-user function call returned 404; 23h59m session passed and 24h01m session lost private reads and received `reauthentication_required` | Repeat through the production UI and document shared-device browser-storage decision |
 | Operations | Passed for control mechanics | Database kill switch rejected automatic release; rollback-only manual-result withdrawal changed result/request state and wrote the audit event; disposable users and token were removed | Verify correction notification and measure operational propagation/response time |
-| Frontend / design | Published; authenticated return pending | GitHub Pages build `1149722023` published merge `3bff2a0`; 390-pixel production Chrome advanced all three stages through Step 4 without horizontal overflow; 64 automated tests plus 17 golden approval cases pass | Run production-origin authenticated return on mobile and desktop and verify no lost draft |
+| Frontend / design | Hosting migrated; authenticated return pending | Private GitHub source deploys automatically to Cloudflare Pages at `tryhomei.us`; 390-pixel production Chrome advanced all three stages through Step 4 without horizontal overflow; 64 automated tests plus 17 golden approval cases pass | Run production-origin authenticated return on mobile and desktop and verify no lost draft |
 
 No production buyer record was altered by the validation. Synthetic records
 were owned by disposable users and were removed through auth-user cascade after

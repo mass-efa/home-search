@@ -644,7 +644,7 @@ It is intentionally local-first and dependency-free:
 - Captures tour debriefs with text and includes experimental browser voice
   capture where supported; voice output is not a release-grade synthesis yet.
 - Suggests Buyer Search Brief updates after debriefs.
-- Runs on GitHub Pages or any static web server.
+- Runs on Cloudflare Pages or any static web server.
 
 This is not the final production architecture. It is a usable learning loop that can be put in front of early users immediately.
 

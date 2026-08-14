@@ -9,7 +9,7 @@ publish, or commit classified artifacts.
 
 The repository currently combines:
 
-- The tracked public GitHub Pages prototype.
+- The tracked static prototype, now hosted on Cloudflare Pages.
 - A tracked local-first buyer workspace prototype.
 - Tracked Supabase and AI-backend scaffolding.
 - Tracked public property briefs and evaluation instructions.
@@ -86,9 +86,10 @@ These edits predate P0 integration and must be preserved.
 
 ## Deployment Boundary
 
-The current GitHub Pages deployment publishes tracked content from `main` at the
-repository root. Untracked private artifacts are not currently deployed, but the
-repository structure makes accidental future inclusion too easy.
+The current Cloudflare Pages deployment publishes tracked content from `main`
+at the repository root. The GitHub repository is private, and untracked private
+artifacts are not deployed, but the repository structure still makes accidental
+future inclusion too easy.
 
 The new application should establish an explicit deployment boundary under
 `apps/web/`. Personal research, raw uploads, local outputs, and fixture source
