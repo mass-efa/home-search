@@ -181,7 +181,7 @@
 
   function setActiveView(name, options) {
     if (!name) return;
-    if (["processing", "results", "workspace", "debrief"].indexOf(name) !== -1 && !remote.user) {
+    if (["processing", "workspace", "debrief"].indexOf(name) !== -1 && !remote.user) {
       remote.lockReason = remote.lockReason || "Sign in to open private home research.";
       name = "account";
     }
@@ -349,27 +349,27 @@
       pre_tour: {
         depth: "quick-scan",
         maxDocuments: 2,
-        cta: "Analyze for touring",
-        question: "Is this home worth touring?",
-        recommendationSet: "Tour · Skip · Watch · Investigate",
+        cta: "Get my recommendation",
+        question: "Is this home worth pursuing?",
+        recommendationSet: "Tour · Don’t tour",
         title: "Tour decision scan",
-        detail: "Listing and public facts, early price context, buyer fit, schools and safety coverage, major unknowns, and a tour watchlist."
+        detail: "Buyer fit and a tour watchlist from what you provide now; public records, schools, safety, and comparable sales are added in the signed-in evidence check."
       },
       post_tour: {
         depth: "decision-brief",
         maxDocuments: 3,
-        cta: "Analyze what we learned",
-        question: "What did we learn from the tour?",
-        recommendationSet: "Revisit · Pause · Pursue · Investigate",
+        cta: "Get my recommendation",
+        question: "Is this home worth pursuing?",
+        recommendationSet: "Pursue · Pass · Pause for one answer",
         title: "Post-tour decision brief",
         detail: "What felt better or worse, observations versus interpretations, partner alignment, unresolved questions, and any preference changes for you to confirm."
       },
       pre_offer: {
         depth: "deep-decision-pack",
         maxDocuments: 5,
-        cta: "Run pre-offer diligence",
-        question: "What should I verify, value, and protect before offering?",
-        recommendationSet: "Pursue · Pause · Investigate · Offer-prep",
+        cta: "Get my recommendation",
+        question: "Is this home worth pursuing?",
+        recommendationSet: "Pursue · Pass · Pause for one answer",
         title: "Pre-offer diligence packet",
         detail: "Documents and page citations, closest comps, cost and hazard flags, unresolved risks, negotiation questions, and professional verification owners."
       }
@@ -739,6 +739,9 @@
       listingPrice: text(data.get("listingPrice")),
       listingQuestions: text(data.get("listingQuestions")),
       listingNotes: text(data.get("listingNotes")),
+      buyerMustHaves: text(data.get("buyerMustHaves")),
+      buyerDealbreakers: text(data.get("buyerDealbreakers")),
+      buyerComfort: text(data.get("buyerComfort")),
       tourReaction: text(data.get("tourReaction")),
       offerTiming: text(data.get("offerTiming")),
       decisionStage: text(data.get("decisionStage")),
@@ -936,24 +939,33 @@
     if (priorityCount) priorityCount.textContent = selectedTopics.length
       ? selectedTopics.length + " topic" + (selectedTopics.length === 1 ? "" : "s") + " selected" + (stageContext ? " · stage context added" : "")
       : (priorityReview ? "Your specific decision context" : "No special priorities added");
-    if (prioritySummary) prioritySummary.textContent = priorityReview || "Homei will begin with the listing and public evidence.";
+    if (prioritySummary) prioritySummary.textContent = priorityReview || (remote.user
+      ? "Homei will begin with the listing and public evidence."
+      : "The Quick Scan will use the listing link and your buyer preferences.");
     var preferenceStatus = preferenceUseStatus();
-    if (preferenceFreshness) preferenceFreshness.textContent = preferenceStatus.label;
-    if (preferenceSummary) preferenceSummary.textContent = preferenceStatus.summary;
+    var primerMustHaves = text(data.get("buyerMustHaves"));
+    var primerDealbreakers = text(data.get("buyerDealbreakers"));
+    if (!state.brief && (primerMustHaves || primerDealbreakers)) {
+      if (preferenceFreshness) preferenceFreshness.textContent = "Starter preferences included";
+      if (preferenceSummary) preferenceSummary.textContent = [primerMustHaves, primerDealbreakers].filter(Boolean).join(" · ");
+    } else {
+      if (preferenceFreshness) preferenceFreshness.textContent = preferenceStatus.label;
+      if (preferenceSummary) preferenceSummary.textContent = preferenceStatus.summary;
+    }
     if (fileCount) fileCount.textContent = documents.length
       ? documents.length + " of " + config.maxDocuments + " files added"
       : "No files added";
     if (fileNames) fileNames.textContent = documents.length
       ? documents.map(function (item) { return item.name; }).join(" · ")
       : "Add documents or photos later if needed.";
-    if (delivery) delivery.textContent = "Automatic after evidence checks";
+    if (delivery) delivery.textContent = remote.user ? "Automatic after evidence checks" : "Free Quick Scan now";
     if (deliveryExpectation) deliveryExpectation.textContent = remote.user
       ? "You can leave after starting. A passing packet appears automatically; an evidence exception asks for one specific next step."
-      : "Sign in to start. A passing packet appears automatically; an evidence exception asks for one specific next step.";
+      : "Your preliminary recommendation appears now. Sign in afterward to unlock records, comps, documents, and a saved evidence check.";
   }
 
   function preferenceUseStatus() {
-    if (!remote.user || !state.brief) {
+    if (!state.brief) {
       return { label: "Not using saved preferences", summary: "Current-request priorities still guide this analysis." };
     }
     var confirmedAt = state.brief.confirmedAt || state.brief.generatedAt;
@@ -963,7 +975,7 @@
       return { label: "Saved preferences need confirmation", summary: "They will be excluded until you confirm them. Current-request priorities still win." };
     }
     return {
-      label: "Confirmed " + new Date(confirmedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      label: (remote.user ? "Confirmed " : "Saved locally ") + new Date(confirmedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
       summary: items.length ? items.join(" · ") : state.brief.thesis
     };
   }
@@ -1657,6 +1669,34 @@
     return items;
   }
 
+  function primerItems(value) {
+    var cleaned = cleanVoiceTranscript(value);
+    if (!cleaned) return [];
+    var items = cleaned.split(/\n+|;+/).map(function (item) {
+      return grammaticalVoiceLine(item, false);
+    }).filter(Boolean);
+    return items.length ? items : [grammaticalVoiceLine(cleaned, false)];
+  }
+
+  function createStarterBriefFromListing(listing) {
+    if (state.brief || (!listing.buyerMustHaves && !listing.buyerDealbreakers)) return;
+    var combined = [listing.buyerMustHaves, listing.buyerDealbreakers, listing.buyerComfort, listing.questions].filter(Boolean).join(". ");
+    state.brief = {
+      generatedAt: new Date().toISOString(),
+      confirmedAt: new Date().toISOString(),
+      thesis: "Evaluate whether this home fits the buyer’s stated priorities, regret risks, and financial comfort.",
+      mustHaves: primerItems(listing.buyerMustHaves),
+      preferences: buildPreferences(combined),
+      dealbreakers: primerItems(listing.buyerDealbreakers),
+      hiddenRisks: buildHiddenRisks(combined),
+      diligenceChecklist: buildDiligenceChecklist(combined),
+      attentionRules: splitSignals(combined),
+      learningLog: [],
+      source: "first_request_primer"
+    };
+    if (listing.buyerComfort) addUnique(state.brief.mustHaves, "Financial comfort: " + listing.buyerComfort + ".");
+  }
+
   function reviewListing(form) {
     var formData = new FormData(form);
     var existingListing = uiState.editingListingId && state.listings.find(function (item) {
@@ -1669,6 +1709,9 @@
       price: text(formData.get("listingPrice")),
       notes: text(formData.get("listingNotes")),
       questions: text(formData.get("listingQuestions")),
+      buyerMustHaves: text(formData.get("buyerMustHaves")),
+      buyerDealbreakers: text(formData.get("buyerDealbreakers")),
+      buyerComfort: text(formData.get("buyerComfort")),
       tourReaction: text(formData.get("tourReaction")),
       offerTiming: text(formData.get("offerTiming")),
       decisionStage: normalizeDecisionStage(formData.get("decisionStage")),
@@ -1679,6 +1722,8 @@
       createdAt: existingListing ? existingListing.createdAt : new Date().toISOString(),
       debriefs: existingListing ? existingListing.debriefs : []
     });
+    enrichListingFromUrl(listing);
+    createStarterBriefFromListing(listing);
     listing.review = buildListingReview(listing);
     if (!existingListing) state.listings.unshift(listing);
     uiState.editingListingId = null;
@@ -1704,7 +1749,12 @@
 
   function buildListingReview(listing) {
     var brief = state.brief || {};
-    var combined = [listing.url, listing.address, listing.price, listing.questions, listing.notes, listing.tourReaction, listing.offerTiming].join(" ").toLowerCase();
+    var combined = [listing.url, listing.address, listing.price, listing.notes, listing.tourReaction, listing.offerTiming].join(" ").toLowerCase();
+    var buyerCriteria = [
+      listing.questions, listing.buyerMustHaves, listing.buyerDealbreakers, listing.buyerComfort,
+      brief.thesis, (brief.mustHaves || []).join(" "), (brief.preferences || []).join(" "),
+      (brief.dealbreakers || []).join(" ")
+    ].join(" ").toLowerCase();
     var score = 68;
     var matches = [];
     var concerns = [];
@@ -1747,6 +1797,18 @@
       if (rule.indexOf("Quiet") !== -1) addUnique(diligence, "Test windows open/closed, outdoor noise, and bedroom quiet.");
     });
 
+    if (includesAny(buyerCriteria, ["quiet", "noise", "traffic", "busy road"])) {
+      addUnique(concerns, "Noise and street feel are buyer-defined regret risks, but they are not verified yet.");
+      addUnique(diligence, "Test road noise outside and inside with windows open and closed, ideally near commute time.");
+    }
+    if (includesAny(buyerCriteria, ["repair", "renovation", "maintenance", "turnkey"])) {
+      addUnique(concerns, "Near-term repair exposure matters to this buyer and still needs evidence.");
+      addUnique(diligence, "Ask for disclosures, inspection material, permits, and ages of major systems.");
+    }
+    if (includesAny(buyerCriteria, ["price", "budget", "monthly", "comfortable", "$", "comp"])) {
+      addUnique(diligence, "Compare the asking price and monthly cost against the buyer’s comfort limit and true nearby comps.");
+    }
+
     if (!matches.length) matches.push("Potential fit depends on in-person feel and whether the listing details support the search brief.");
     if (!concerns.length) concerns.push("No obvious mismatch from the notes provided, but hidden condition/title risks still need checking.");
     if (!diligence.length) diligence.push("Ask the agent for disclosures, offer timeline, showing activity, title, and permit history.");
@@ -1786,6 +1848,42 @@
       return recommendation + ": " + address + " should advance only after the remaining offer-stage evidence is resolved.";
     }
     return recommendation + ": " + address + " should earn tour time only if the current fit and unknowns justify the trip.";
+  }
+
+  function buyerFacingRecommendation(listing, review, candidate) {
+    var stage = normalizeDecisionStage(listing.decisionStage);
+    var read = text(candidate && candidate.decisionRead ? candidate.decisionRead : review.recommendation).toLowerCase();
+    var explicitlyNegative = includesAny(read, ["skip", "pass", "don’t", "don't", "do not pursue", "do not tour"]);
+    if (stage === "pre_tour") {
+      return explicitlyNegative || (!candidate && review.score < 65)
+        ? { label: "DON’T TOUR", tone: "negative" }
+        : { label: "TOUR", tone: "positive" };
+    }
+    if (explicitlyNegative || (!candidate && review.score < 50)) return { label: "PASS", tone: "negative" };
+    if (includesAny(read, ["pause", "investigate", "revisit", "need one answer"]) || (!candidate && review.score < 65)) {
+      return { label: "PAUSE FOR ONE ANSWER", tone: "pause" };
+    }
+    return { label: "PURSUE", tone: "positive" };
+  }
+
+  function recommendationConfidence(listing, candidate) {
+    if (candidate) return { label: "Evidence-backed", level: "High confidence" };
+    var propertySignals = [listing.address, listing.price, listing.notes, listing.tourReaction, listing.offerTiming].filter(Boolean).length;
+    return {
+      label: "Preliminary Quick Scan",
+      level: propertySignals >= 2 ? "Medium confidence" : "Low confidence"
+    };
+  }
+
+  function recommendationExplanation(listing, verdict) {
+    if (normalizeDecisionStage(listing.decisionStage) === "pre_tour") {
+      return verdict.label === "TOUR"
+        ? "Nothing in the information provided rules out a tour. If the home otherwise interests you, use the watchlist below to test the assumptions in person."
+        : "The current mismatch or regret risk is too large to justify the tour unless a material fact changes.";
+    }
+    if (verdict.label === "PURSUE") return "The current fit is strong enough to keep investing time, subject to the unresolved evidence below.";
+    if (verdict.label === "PASS") return "The current tradeoffs do not justify more time unless a material fact changes.";
+    return "Resolve the one material unknown below before investing more time or preparing an offer.";
   }
 
   function buildSkillEvaluation(listing, review) {
@@ -2123,7 +2221,7 @@
         if (activeVoiceTarget === "listingQuestions") {
           target.value = [activeVoiceInitialValue, formatStructuredVoice(activeVoiceTranscript)].filter(Boolean).join("\n\n");
         } else {
-          target.value = [activeVoiceInitialValue, activeVoiceTranscript].filter(Boolean).join(" ");
+          target.value = [activeVoiceInitialValue, formatNarrativeVoice(activeVoiceTranscript)].filter(Boolean).join(" ");
         }
         renderStructuredVoice(activeVoiceTranscript);
       }
@@ -2135,7 +2233,7 @@
 
     recognition.onend = function () {
       setVoiceStatus(activeVoiceTranscript
-        ? "We organized what you said. Review the editable notes before continuing."
+        ? "We cleaned and organized what you said. Review the editable notes before continuing."
         : "Voice capture is idle.");
       activeVoiceTarget = null;
     };
@@ -2168,8 +2266,28 @@
     });
   }
 
-  function voiceSentences(transcript) {
+  function cleanVoiceTranscript(transcript) {
     return String(transcript || "")
+      .replace(/\b(?:um+|uh+|erm+)\b[,.]?/gi, " ")
+      .replace(/\b(?:you know|i mean)\b[,.]?/gi, " ")
+      .replace(/\s+([,.!?])/g, "$1")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  function grammaticalVoiceLine(line, isQuestion) {
+    var cleaned = cleanVoiceTranscript(line)
+      .replace(/\bi\b/g, "I")
+      .replace(/^[,;:\s]+|[,;:\s]+$/g, "");
+    if (!cleaned) return "";
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    cleaned = cleaned.replace(/[.!?]+$/, "");
+    return cleaned + (isQuestion ? "?" : ".");
+  }
+
+  function voiceSentences(transcript) {
+    return cleanVoiceTranscript(transcript)
+      .replace(/\s+(but|however|also|we need|we want|we don’t|we don't|i need|i want|i don’t|i don't|our biggest concern|my biggest concern|we wonder|i wonder)\s+/gi, ". $1 ")
       .split(/[.!?]+/)
       .map(function (item) { return text(item); })
       .filter(Boolean);
@@ -2179,12 +2297,20 @@
     var buckets = { goals: [], dealbreakers: [], concerns: [], questions: [] };
     voiceSentences(transcript).forEach(function (line) {
       var lower = line.toLowerCase();
-      if (/[?]|wonder|question|find out|ask/.test(lower)) buckets.questions.push(line);
-      else if (/deal.?breaker|must not|cannot|won't|skip|never|absolutely need/.test(lower)) buckets.dealbreakers.push(line);
-      else if (/worry|concern|risk|noise|repair|traffic|drainage|school|safety|price/.test(lower)) buckets.concerns.push(line);
-      else buckets.goals.push(line);
+      var isQuestion = /wonder|question|find out|ask|can we|could we|is there|does it|what|why|how/.test(lower);
+      var cleaned = grammaticalVoiceLine(line, isQuestion);
+      if (isQuestion) buckets.questions.push(cleaned);
+      else if (/deal.?breaker|must not|cannot|won't|skip|never|absolutely need/.test(lower)) buckets.dealbreakers.push(cleaned);
+      else if (/worry|concern|risk|noise|repair|traffic|drainage|school|safety|price/.test(lower)) buckets.concerns.push(cleaned);
+      else buckets.goals.push(cleaned);
     });
     return buckets;
+  }
+
+  function formatNarrativeVoice(transcript) {
+    return voiceSentences(transcript).map(function (line) {
+      return grammaticalVoiceLine(line, false);
+    }).filter(Boolean).join(" ");
   }
 
   function formatStructuredVoice(transcript) {
@@ -2209,6 +2335,8 @@
       var node = document.querySelector("[data-voice-" + key + "]");
       if (node) node.textContent = buckets[key].join(" · ");
     });
+    var raw = document.querySelector("[data-voice-raw]");
+    if (raw) raw.textContent = text(transcript);
     container.hidden = false;
   }
 
@@ -2225,6 +2353,7 @@
     renderDebriefOptions();
     renderGuidedExperience();
     renderPreferenceSnapshot();
+    syncPreferencePrimer();
     renderRequestReturn();
     syncDecisionStagePresentation();
   }
@@ -2233,14 +2362,31 @@
     var summary = document.querySelector("[data-preference-summary]");
     var freshness = document.querySelector("[data-preference-freshness]");
     if (!summary || !freshness) return;
-    if (!remote.user || !state.brief) {
+    var localSummary = document.querySelector("[data-preference-local-summary]");
+    if (!state.brief) {
       summary.textContent = "Add preferences once and Homei will show the most relevant ones here.";
       freshness.textContent = "Not confirmed yet";
+      if (localSummary) localSummary.textContent = "No account is required. These answers stay in this browser unless you choose to sign in.";
       return;
     }
     var status = preferenceUseStatus();
     summary.textContent = status.summary;
     freshness.textContent = status.label;
+    if (localSummary) localSummary.textContent = "Using: " + status.summary;
+  }
+
+  function syncPreferencePrimer() {
+    var primer = document.querySelector("[data-preference-primer]");
+    var snapshot = document.querySelector("[data-preference-snapshot]");
+    var needsPrimer = !state.brief;
+    if (primer) primer.hidden = !needsPrimer;
+    if (snapshot) snapshot.hidden = needsPrimer;
+    ["buyerMustHaves", "buyerDealbreakers", "buyerComfort"].forEach(function (name) {
+      var field = document.querySelector('[name="' + name + '"]');
+      if (!field) return;
+      field.disabled = !needsPrimer;
+      if (name !== "buyerComfort") field.required = needsPrimer;
+    });
   }
 
   function getActiveListing() {
@@ -2617,23 +2763,18 @@
 
   function renderListings() {
     var target = document.querySelector("[data-listing-stack]");
-    if (!remote.user) {
-      target.innerHTML = [
-        '<div class="polished-empty">',
-        '<span aria-hidden="true">⌂</span>',
-        "<h2>Your private reports are locked</h2>",
-        "<p>Sign in to reopen saved homes and decision packets.</p>",
-        '<button class="button coral" type="button" data-view-target="account">Sign in</button>',
-        "</div>"
-      ].join("");
-      return;
-    }
+    var resultsTitle = document.querySelector("[data-results-title]");
+    var resultsSubtitle = document.querySelector("[data-results-subtitle]");
+    if (resultsTitle) resultsTitle.textContent = remote.user ? "Home decisions" : "Your free Quick Scan";
+    if (resultsSubtitle) resultsSubtitle.textContent = remote.user
+      ? "Every recommendation stays connected to the preferences, evidence, and questions that shaped it."
+      : "A buyer-specific first read from the listing link and preferences you provided—no account required.";
     if (!state.listings.length) {
       target.innerHTML = [
         '<div class="polished-empty">',
         '<span aria-hidden="true">⌂</span>',
-        "<h2>No homes yet</h2>",
-        "<p>Add a home to create your first buyer-specific decision packet.</p>",
+        "<h2>" + (remote.user ? "No homes yet" : "No Quick Scan yet") + "</h2>",
+        "<p>Add a home to get your first buyer-specific recommendation.</p>",
         '<button class="button coral" type="button" data-view-target="request" data-new-request>Analyze a home</button>',
         "</div>"
       ].join("");
@@ -2645,14 +2786,16 @@
       var skillEvaluation = review.skillEvaluation;
       var hasEvidenceResult = Boolean(listing.aiEvaluation);
       var releasedCandidate = hasEvidenceResult ? listing.aiEvaluation : null;
-      var decisionIntro = hasEvidenceResult
-        ? '<div class="decision-summary"><p class="decision-summary-copy">' + escapeHtml(releasedCandidate.decisionRead || "Reviewed decision packet") + '</p></div>'
-        : [
-          '<div class="request-saved-summary">',
-          "<strong>Your request is saved.</strong>",
-          "<p>We’ve organized the questions that matter. Run the private evidence check before treating this as a recommendation.</p>",
-          "</div>"
-        ].join("");
+      var verdict = buyerFacingRecommendation(listing, review, releasedCandidate);
+      var confidence = recommendationConfidence(listing, releasedCandidate);
+      var decisionIntro = [
+        '<section class="decision-verdict" data-tone="' + escapeHtml(verdict.tone) + '">',
+        '<div class="decision-verdict-heading"><span>Our call</span><strong>' + escapeHtml(verdict.label) + "</strong></div>",
+        "<p>" + escapeHtml(recommendationExplanation(listing, verdict)) + "</p>",
+        '<div class="decision-confidence"><span>' + escapeHtml(confidence.label) + "</span><span>" + escapeHtml(confidence.level) + "</span></div>",
+        '<p class="decision-flip"><strong>What could change this call:</strong> ' + escapeHtml((review.diligence && review.diligence[0]) || "A material fact that changes the buyer fit or risk.") + "</p>",
+        "</section>"
+      ].join("");
       var preliminaryQuestions = hasEvidenceResult ? [
         '<div class="decision-priority-grid">',
         priorityList("Buyer fit", [candidateSection(releasedCandidate, "buyer_fit")], "strength"),
@@ -2660,16 +2803,17 @@
         priorityList("What to do next", [candidateSection(releasedCandidate, "questions_actions")], "action"),
         "</div>"
       ].join("") : [
-        '<div class="decision-priority-grid preliminary-grid">',
-        priorityList("Questions to test", review.concerns, "risk"),
-        priorityList("Evidence to gather", review.diligence, "action"),
+        '<div class="decision-priority-grid">',
+        priorityList("Why this call", review.matches, "strength"),
+        priorityList("Risks and unknowns", review.concerns, "risk"),
+        priorityList(normalizeDecisionStage(listing.decisionStage) === "pre_tour" ? "Tour watchlist" : "What to do next", review.diligence, "action"),
         "</div>"
       ].join("");
       return [
         '<article class="listing-card decision-card">',
         '<div class="listing-card-head">',
         "<div>",
-        '<span class="decision-card-label">' + (hasEvidenceResult ? "Evidence-checked decision packet" : "Request saved · Evidence check pending") + "</span>",
+        '<span class="decision-card-label">' + (hasEvidenceResult ? "Evidence-checked decision packet" : (remote.user ? "Preliminary recommendation" : "Free buyer-specific Quick Scan")) + "</span>",
         "<h3>" + escapeHtml(listing.address || listing.url || "Untitled listing") + "</h3>",
         '<p class="muted-line">' + escapeHtml([listing.price, dateLabel(listing.createdAt)].filter(Boolean).join(" · ")) + "</p>",
         "</div>",
@@ -2682,7 +2826,7 @@
         listing.aiEvaluation ? renderApprovedEvaluation(listing.aiEvaluation) : "",
         hasEvidenceResult ? "" : [
           '<details class="report-details">',
-          "<summary>See the preliminary question map</summary>",
+          "<summary>See the full preliminary diligence map</summary>",
           renderSkillEvaluation(skillEvaluation),
           "</details>"
         ].join(""),
@@ -2727,7 +2871,7 @@
     var buttonLabel = hasAi ? "Refresh evidence check" : "Run the deeper evidence check";
     var hint = !endpoint
       ? "The deeper private analysis is temporarily unavailable."
-      : (!remote.user ? "Sign in to save this home and begin the private analysis." : "We’ll clearly label what is verified, inferred, or still unknown.");
+      : (!remote.user ? "Sign in to check records, comps, and documents and save the decision across devices." : "We’ll clearly label what is verified, inferred, or still unknown.");
     if (listing.aiStatus) hint = listing.aiStatus;
     var button;
     if (listing.requestStatus === "in_review") {
@@ -2745,7 +2889,7 @@
     } else if (ready) {
       button = '<button class="button coral" type="button" data-run-ai-evaluation="' + escapeHtml(listing.id) + '">' + escapeHtml(buttonLabel) + "</button>";
     } else if (endpoint && !remote.user) {
-      button = '<button class="button coral" type="button" data-prepare-auth="' + escapeHtml(listing.id) + '" data-view-target="account">Sign in to continue</button>';
+      button = '<button class="button coral" type="button" data-prepare-auth="' + escapeHtml(listing.id) + '" data-view-target="account">Unlock the deep decision check</button>';
     } else {
       button = '<button class="button secondary" type="button" disabled>' + escapeHtml(buttonLabel) + "</button>";
     }
@@ -2981,11 +3125,18 @@
       if (submitter && submitter.hasAttribute("data-submit-analysis")) {
         if (isAiReady()) {
           requestAiEvaluation(listing.id);
-        } else {
+        } else if (!remote.user) {
           uiState.pendingAnalysisListingId = listing.id;
           saveUiState();
-          setActiveView("account");
-          trackFunnel("auth_gate_viewed", { source: "first_request" });
+          setActiveView("results", { focus: true });
+          trackFunnel("guest_quick_scan_viewed", {
+            decisionStage: normalizeDecisionStage(listing.decisionStage),
+            recommendation: buyerFacingRecommendation(listing, listing.review, null).label
+          });
+        } else {
+          listing.aiStatus = "Your preliminary recommendation is ready. The deeper evidence check is temporarily unavailable.";
+          saveState();
+          setActiveView("results", { focus: true });
         }
       }
     });

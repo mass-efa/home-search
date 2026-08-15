@@ -8,7 +8,7 @@ That means the product should not start as an admin tool, a static demo, or a fu
 
 The acquisition promise and retention promise are related but distinct:
 
-- Acquire with a decision packet for one home.
+- Acquire with a signed-out, buyer-specific Quick Scan for one home.
 - Retain with a private home-buying second brain that learns from listings, tours, and changing preferences.
 
 The Buyer Search Brief makes future reviews better, but it must not block a buyer from submitting their first home.
@@ -50,6 +50,18 @@ Homei helps buyers:
 - Review listings against their real preferences.
 - Capture messy tour reactions through voice or text.
 - Turn each listing/tour into a sharper Buyer Search Brief.
+
+## One Buyer Question, Three Internal Contexts
+
+The buyer-facing product centers one question:
+
+> **Is this home worth pursuing?**
+
+Before a tour, the immediate answer is `Tour` or `Don't tour`. After a tour or
+near an offer, the answer becomes `Pursue`, `Pass`, or—only when a material fact
+is truly missing—`Pause for one answer`. The three stored stages remain because
+they bound evidence and analysis depth, but they are context for one product,
+not three competing products.
 
 ## Three Decision Stages
 
@@ -116,8 +128,10 @@ generating a new version. Migration never changes an already released result.
 The default intake is a four-step, listing-first flow:
 
 1. **Home:** paste a Redfin/other listing URL or enter an address.
-2. **Decision:** choose `Pre-tour`, `Post-tour`, or `Pre-offer` and describe what
-   matters now, using suggested topics plus free text or voice-shaped text.
+2. **What matters:** identify what the home must get right, the largest
+   regret/dealbreaker risk, optional financial comfort, and anything specific to
+   investigate. A saved, recently confirmed Buyer Search Brief can satisfy the
+   durable-preference portion without making the buyer repeat it.
 3. **Evidence:** optionally add disclosures, inspection/tour reports, and photos.
    Photos are supported now; video is explicitly later. Never imply that an
    uploaded image establishes a professional condition finding.
@@ -140,6 +154,22 @@ staging, and preserve a recoverable draft if upload fails. Video is not an
 accepted file type.
 
 The interface should preserve work before sign-in and should not ask for information that is not yet needed. Privacy, evidence limits, and the expected result should be clear at the point of submission.
+
+### Signed-out Quick Scan
+
+A first-time buyer must receive useful value before authentication. After the
+four-step intake, Homei saves the request locally and immediately shows:
+
+- `Tour` or `Don't tour` for a pre-tour request.
+- Recommendation confidence based on input completeness.
+- Three strongest fit signals.
+- Three risks or likely disappointment points.
+- A tour watchlist and agent questions.
+- The facts that could change the recommendation.
+
+This is a preliminary, listing-and-buyer-input scan, not an evidence-backed
+property finding. Sign-in unlocks durable cross-device history, private document
+processing, records and comparable-sale research, and the deeper decision check.
 
 ### Optional Search Context
 
@@ -179,6 +209,12 @@ buyer can talk naturally with a partner, but capture/transcription is
 experimental and P1 until consent, correction, retention, and structured
 synthesis are verified. If an experimental control remains visible during P0,
 it must be labeled accordingly and typed input remains complete.
+
+Visible voice output must never be an unedited transcript dump. After recording,
+Homei removes filler, repairs capitalization and punctuation, separates goals,
+dealbreakers, concerns, and questions, and presents an editable draft for buyer
+confirmation. The original transcript remains available for audit. Cleanup must
+preserve negation, uncertainty, and meaning and may not invent preferences.
 
 ### Generate Buyer Search Brief
 
@@ -489,6 +525,10 @@ primary buyer message.
 
 Shows:
 
+- A top-of-page buyer-facing call (`Tour`, `Don't tour`, `Pursue`, `Pass`, or a
+  rare `Pause for one answer`) before any processing or evidence status.
+- Recommendation confidence and whether the call is preliminary or
+  evidence-backed.
 - Decision summary.
 - Strongest reasons.
 - Largest risks and unknowns.

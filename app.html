@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Homei — Research your biggest investment</title>
     <meta name="description" content="Buyer-specific diligence for touring, investigating, and offering on a home with confidence.">
-    <link rel="stylesheet" href="assets/site.css?v=20260813d">
+    <link rel="stylesheet" href="assets/site.css?v=20260815c">
   </head>
   <body class="app-body">
     <header class="buddy-header">
@@ -40,16 +40,16 @@
         <div class="entry-hero">
           <p class="eyebrow">Independent decision support for homebuyers</p>
           <h1>A home may be your biggest investment. Research it like one.</h1>
-          <p class="entry-lede">Buyer-specific diligence for touring, investigating, and offering with confidence.</p>
+          <p class="entry-lede">Paste a listing and get a buyer-specific call on whether this home is worth pursuing.</p>
 
           <form class="listing-entry" data-url-entry>
             <label for="heroListingUrl">Listing link</label>
             <div class="listing-entry-control">
               <span class="entry-icon" aria-hidden="true">⌂</span>
               <input id="heroListingUrl" type="url" inputmode="url" autocomplete="url" placeholder="Paste a Redfin, Zillow, or listing link" required>
-              <button class="button coral" type="submit">Analyze this home</button>
+              <button class="button coral" type="submit">Get my free Quick Scan</button>
             </div>
-            <p class="field-hint">You can add priorities and documents before the analysis begins.</p>
+            <p class="field-hint">No account required. We’ll ask what matters before giving you a recommendation.</p>
           </form>
 
           <div class="trust-row" aria-label="Why buyers use Homei">
@@ -108,8 +108,8 @@
             <form class="form-grid app-form-compact guided-request" data-listing-form>
               <section class="request-step is-active" data-request-step="1">
                 <p class="step-count">Step 1 of 4</p>
-                <h1>Which home are you considering?</h1>
-                <p>We’ll use the listing as a starting point and verify important details independently.</p>
+                <h1>Is this home worth pursuing?</h1>
+                <p>Start with the listing. What you’ve already done helps us choose the right depth.</p>
                 <div class="field app-full">
                   <label for="listingUrl">Listing link</label>
                   <input id="listingUrl" name="listingUrl" type="url" autocomplete="url" placeholder="https://www.redfin.com/..." required>
@@ -123,11 +123,11 @@
                   <input id="listingPrice" name="listingPrice" type="text" placeholder="$1,250,000 · Active">
                 </div>
                 <div class="field app-full">
-                  <label for="decisionStage">Where are you in the decision?</label>
+                  <label for="decisionStage">What have you done so far?</label>
                   <select id="decisionStage" name="decisionStage" data-decision-stage>
-                    <option value="pre_tour">Should I tour this home?</option>
-                    <option value="post_tour">I toured it—what did we learn?</option>
-                    <option value="pre_offer">I’m preparing an offer</option>
+                    <option value="pre_tour">I haven’t toured it yet</option>
+                    <option value="post_tour">I toured it</option>
+                    <option value="pre_offer">I’m preparing to offer</option>
                   </select>
                 </div>
                 <div class="stage-input-panels" data-stage-input-panels>
@@ -152,7 +152,28 @@
               <section class="request-step" data-request-step="2" hidden>
                 <p class="step-count">Step 2 of 4</p>
                 <h1>What would make or break this home for you?</h1>
-                <p>Choose anything important, then tell us what’s specific to your decision.</p>
+                <p>A useful recommendation needs a little context about the life and tradeoffs you’re buying for.</p>
+                <section class="preference-primer" data-preference-primer aria-labelledby="preference-primer-title">
+                  <div class="preference-primer-heading">
+                    <div><span class="panel-label">60-second preference primer</span><strong id="preference-primer-title">Tell us enough to make this personal</strong></div>
+                    <span>Saved privately in this browser</span>
+                  </div>
+                  <div class="preference-primer-grid">
+                    <div class="field app-full">
+                      <label for="buyerMustHaves">What must this home get right?</label>
+                      <textarea id="buyerMustHaves" name="buyerMustHaves" rows="3" placeholder="Example: Quiet bedrooms, space to host, and an easy commute." required></textarea>
+                    </div>
+                    <div class="field app-full">
+                      <label for="buyerDealbreakers">What would make you regret choosing it?</label>
+                      <textarea id="buyerDealbreakers" name="buyerDealbreakers" rows="3" placeholder="Example: Constant road noise, major near-term repairs, or a dark main floor." required></textarea>
+                    </div>
+                  </div>
+                  <div class="field app-full">
+                    <label for="buyerComfort">What price or monthly cost feels comfortable? <span>Optional</span></label>
+                    <input id="buyerComfort" name="buyerComfort" type="text" placeholder="Example: Comfortable around $1.4M or $8,000/month all-in">
+                  </div>
+                  <p>These answers become your starter preferences. You can edit them anytime.</p>
+                </section>
                 <section class="preference-snapshot" aria-labelledby="preference-snapshot-title" data-preference-snapshot>
                   <div data-preference-signed-in hidden>
                     <span class="panel-label">Your saved preferences</span>
@@ -164,10 +185,9 @@
                     <button class="quiet-button" type="button" data-view-target="workspace">Confirm or edit</button>
                   </div>
                   <div class="preference-signed-out" data-preference-signed-out>
-                    <span class="panel-label">Optional</span>
-                    <strong>Make this analysis more personal</strong>
-                    <p>Sign in to reuse saved preferences—or continue without them.</p>
-                    <button class="quiet-button" type="button" data-view-target="account" data-auth-return="request">Sign in to use preferences</button>
+                    <span class="panel-label">Private local profile</span>
+                    <strong>Your starter preferences shape this Quick Scan</strong>
+                    <p data-preference-local-summary>No account is required. Sign in later only if you want deeper research and cross-device access.</p>
                   </div>
                 </section>
                 <div class="choice-chips" data-priority-chips>
@@ -189,13 +209,14 @@
                   <span class="voice-status" data-voice-status>Voice is ready.</span>
                 </div>
                 <section class="structured-voice-output" data-structured-voice-output hidden aria-live="polite" aria-label="Structured notes from your recording">
-                  <div class="structured-voice-heading"><strong>Draft structured notes</strong><span>Experimental · edit and confirm before continuing</span></div>
+                  <div class="structured-voice-heading"><strong>Cleaned, structured notes</strong><span>Edit and confirm before continuing</span></div>
                   <div class="structured-voice-grid">
                     <article><span>Goals</span><p data-voice-goals></p></article>
                     <article><span>Dealbreakers</span><p data-voice-dealbreakers></p></article>
                     <article><span>Concerns</span><p data-voice-concerns></p></article>
                     <article><span>Questions</span><p data-voice-questions></p></article>
                   </div>
+                  <details class="voice-original"><summary>See the original transcript</summary><p data-voice-raw></p></details>
                 </section>
                 <div class="step-actions">
                   <button class="button secondary" type="button" data-request-back>Back</button>
@@ -232,14 +253,14 @@
                 <h1>Review your private request.</h1>
                 <p>Confirm the home, decision, priorities, evidence, and bounded research scope before the analysis begins.</p>
                 <div class="selected-stage-confirmation" data-selected-stage-confirmation>
-                  <span class="panel-label">Your decision</span>
-                  <strong data-selected-stage-label>Should I tour this home?</strong>
-                  <small data-review-recommendations>Tour · Skip · Watch · Investigate</small>
+                  <span class="panel-label">Recommendation we’re preparing</span>
+                  <strong data-selected-stage-label>Is this home worth pursuing?</strong>
+                  <small data-review-recommendations>Tour · Don’t tour</small>
                   <button class="quiet-button" type="button" data-edit-stage data-edit-request>Edit decision</button>
                 </div>
                 <div class="request-confirmation-grid">
                   <section><span class="panel-label">Priorities</span><strong data-review-priority-count>No special priorities added</strong><p data-review-priority-summary>Homei will begin with the listing and public evidence.</p></section>
-                  <section><span class="panel-label">Preferences</span><strong data-review-preference-freshness>Not using saved preferences</strong><p data-review-preference-summary>You can continue without a saved buyer profile.</p></section>
+                  <section><span class="panel-label">Preferences</span><strong data-review-preference-freshness>Starter preferences included</strong><p data-review-preference-summary>Your must-haves and regret risks shape the recommendation.</p></section>
                   <section><span class="panel-label">Files</span><strong data-review-file-count>No files added</strong><p data-review-file-names>Add documents or photos later if needed.</p></section>
                   <section><span class="panel-label">Delivery</span><strong data-review-delivery>Automatic after evidence checks</strong><p data-review-delivery-expectation>A passing packet appears automatically; an evidence exception asks for one specific next step.</p></section>
                 </div>
@@ -266,7 +287,7 @@
                 </div>
                 <div class="step-actions sticky-mobile">
                   <button class="button secondary" type="button" data-request-back>Back</button>
-                  <button class="button coral stage-aware-cta" type="submit" data-submit-analysis data-stage-cta data-tour-label="Analyze for touring" data-investigate-label="Build agent investigation brief" data-offer-label="Run pre-offer diligence">Analyze for touring</button>
+                  <button class="button coral stage-aware-cta" type="submit" data-submit-analysis data-stage-cta>Get my recommendation</button>
                 </div>
               </section>
             </form>
@@ -301,8 +322,8 @@
         <div class="results-header">
           <div>
             <p class="section-kicker">Your homes</p>
-            <h1>Decision packets</h1>
-            <p>Every home stays connected to the evidence, questions, and reactions that shaped your decision.</p>
+            <h1 data-results-title>Home decisions</h1>
+            <p data-results-subtitle>Every recommendation stays connected to the preferences, evidence, and questions that shaped it.</p>
           </div>
           <button class="button coral" type="button" data-view-target="request" data-new-request>Add another home</button>
         </div>
@@ -446,6 +467,6 @@
     <script src="assets/config.js?v=20260802c"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="lib/listing/listing-url.js?v=20260802"></script>
-    <script src="assets/buddy-app.js?v=20260813f"></script>
+    <script src="assets/buddy-app.js?v=20260815c"></script>
   </body>
 </html>

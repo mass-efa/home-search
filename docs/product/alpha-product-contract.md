@@ -45,6 +45,10 @@ The triggering moment is:
 > "I found a home I may care about, and I need to know what deserves attention
 > before I spend more time, money, or emotional energy on it."
 
+The buyer-facing product organizes that moment around one question: **"Is this
+home worth pursuing?"** Tour status changes the depth and evidence requirements,
+not the core product promise.
+
 Common immediate decisions include:
 
 - Is this worth touring?
@@ -96,8 +100,9 @@ is not success by itself.
 
 The promise has five parts:
 
-1. **Decision first:** lead with tour, skip, watch, investigate, pursue, or
-   offer-prep and explain what would change that read.
+1. **Decision first:** lead with `Tour` or `Don't tour` before a visit and
+   `Pursue`, `Pass`, or a rare `Pause for one answer` later; explain what would
+   change that read.
 2. **Buyer specific:** answer the buyer's submitted questions and apply the
    context they chose to provide.
 3. **Evidence aware:** distinguish sourced facts, calculations, inferences,
@@ -232,12 +237,18 @@ meaningful scope or price change before deeper work begins.
      experience.
 
 2. **Submit a live listing**
-   - The buyer signs in and provides a Redfin or other listing URL.
+   - The buyer provides a Redfin or other listing URL before signing in.
+   - A 60-second primer captures what the home must get right, the biggest
+     regret/dealbreaker risk, and optional financial comfort unless a current
+     Buyer Search Brief already supplies that context.
    - The buyer answers: "What do you especially want us to investigate?"
    - Address, decision stage, deadline, and lightweight priorities are requested
      with sensible optionality.
    - The buyer may upload disclosures, inspection, title, permit, HOA, or other
      supporting documents.
+   - A signed-out buyer immediately receives a locally generated Quick Scan;
+     sign-in is the gate to durable private research and the evidence-backed
+     decision, not the gate to all value.
 
 3. **Confirm scope and consent**
    - The product confirms Quick Scan or Deep Decision Pack scope, what evidence

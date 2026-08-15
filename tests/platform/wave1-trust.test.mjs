@@ -192,10 +192,12 @@ test("public RPC privileges are fail-closed and role-specific", () => {
     /validate_home_buddy_document_ownership\(\)[\s\S]*from public, anon, authenticated, service_role/);
 });
 
-test("the browser locks every private route and never renders prior reports while signed out", () => {
-  assert.match(buyerApp, /\["processing", "results", "workspace", "debrief"\][\s\S]*!remote\.user/);
+test("the browser locks private research while allowing an anonymous local Quick Scan", () => {
+  assert.match(buyerApp, /\["processing", "workspace", "debrief"\][\s\S]*!remote\.user/);
   assert.match(buyerApp, /node\.hidden = !remote\.user \|\| !state\.listings\.length/);
-  assert.match(buyerApp, /if \(!remote\.user\) \{[\s\S]*Your private reports are locked/);
+  assert.match(buyerApp, /Free buyer-specific Quick Scan/);
+  assert.match(buyerApp, /Unlock the deep decision check/);
+  assert.match(buyerApp, /stateWithoutReleasedPayloads/);
   assert.doesNotMatch(buyerApp, /remote\.configured && !remote\.user/);
 });
 
@@ -229,10 +231,28 @@ test("the buyer intake implements the canonical three-stage walkthrough contract
   assert.match(app, /option value="pre_tour"/);
   assert.match(app, /option value="post_tour"/);
   assert.match(app, /option value="pre_offer"/);
-  assert.match(buyerApp, /pre_tour:[\s\S]*maxDocuments: 2[\s\S]*Tour · Skip · Watch · Investigate/);
-  assert.match(buyerApp, /post_tour:[\s\S]*maxDocuments: 3[\s\S]*Revisit · Pause · Pursue · Investigate/);
-  assert.match(buyerApp, /pre_offer:[\s\S]*maxDocuments: 5[\s\S]*Pursue · Pause · Investigate · Offer-prep/);
+  assert.match(buyerApp, /pre_tour:[\s\S]*maxDocuments: 2[\s\S]*Tour · Don’t tour/);
+  assert.match(buyerApp, /post_tour:[\s\S]*maxDocuments: 3[\s\S]*Pursue · Pass · Pause for one answer/);
+  assert.match(buyerApp, /pre_offer:[\s\S]*maxDocuments: 5[\s\S]*Pursue · Pass · Pause for one answer/);
+  assert.match(app, /Is this home worth pursuing\?/);
   assert.doesNotMatch(app, /option value="considering-tour"|option value="post-tour"|option value="pre-offer"/);
+});
+
+test("first-time recommendations require buyer context and lead with a plain-language call", () => {
+  assert.match(app, /name="buyerMustHaves"[\s\S]*required/);
+  assert.match(app, /name="buyerDealbreakers"[\s\S]*required/);
+  assert.match(buyerApp, /function createStarterBriefFromListing/);
+  assert.match(buyerApp, /buyerFacingRecommendation/);
+  assert.match(buyerApp, /DON’T TOUR/);
+  assert.match(buyerApp, /guest_quick_scan_viewed/);
+});
+
+test("voice notes are cleaned, structured, editable, and retain the original transcript", () => {
+  assert.match(buyerApp, /function cleanVoiceTranscript/);
+  assert.match(buyerApp, /function grammaticalVoiceLine/);
+  assert.match(buyerApp, /We cleaned and organized what you said/);
+  assert.match(app, /data-voice-raw/);
+  assert.match(app, /Edit and confirm before continuing/);
 });
 
 test("final request review states preference, file, scope, and immediate-delivery expectations", () => {
@@ -240,6 +260,7 @@ test("final request review states preference, file, scope, and immediate-deliver
     "data-review-priority-count", "data-review-preference-freshness", "data-review-file-count",
     "data-stage-scope-title", "data-review-delivery-expectation"
   ]) assert.match(app, new RegExp(marker));
+  assert.match(buyerApp, /Free Quick Scan now/);
   assert.match(buyerApp, /Automatic after evidence checks/);
   assert.match(buyerApp, /create_home_buddy_preference_version/);
   assert.match(buyerApp, /Saved preferences need confirmation/);
